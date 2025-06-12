@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Backpropagation Visualization</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            padding: 30px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.3);
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            font-weight: bold;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.2rem;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .network-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin: 40px 0;
+            min-height: 500px;
+        }
+        
+        .network {
+            position: relative;
+            width: 900px;
+            height: 500px;
+        }
+        
+        .neuron {
+            position: absolute;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 14px;
+            color: white;
+            border: 3px solid rgba(255,255,255,0.3);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+            transition: all 0.3s ease;
+            cursor: pointer;
+            text-align: center;
+            line-height: 1.2;
+        }
+        
+        .neuron:hover {
+            transform: scale(1.1);
+            box-shadow: 0 15px 30px rgba(0,0,0,0.3);
+        }
+        
+        .neuron.activated {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+            animation: pulse 1s ease-in-out;
+        }
+        
+        .neuron.error {
+            background: linear-gradient(135deg, #ff6b6b 0%, #ffa500 100%);
+            animation: shake 0.5s ease-in-out;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.2); }
+        }
+        
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        
+        .layer-label {
+            position: absolute;
+            top: -40px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-weight: bold;
+            color: #FFD700;
+            font-size: 16px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        
+        .btn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .btn.primary {
+            background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+        }
+        
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .info-panel {
+            background: rgba(255,255,255,0.1);
+            border-radius: 15px;
+            padding: 20px;
+            margin: 20px 0;
+            backdrop-filter: blur(5px);
+        }
+        
+        .step-info {
+            text-align: center;
+            font-size: 1.1rem;
+            margin: 15px 0;
+        }
+        
+        .math-display {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 15px;
+            margin: 15px 0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            font-size: 14px;
+        }
+        
+        .connection {
+            stroke: rgba(255,255,255,0.6);
+            stroke-width: 3;
+            fill: none;
+            transition: all 0.3s ease;
+        }
+        
+        .connection.forward {
+            stroke: #4facfe;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 8px rgba(79, 172, 254, 0.6));
+        }
+        
+        .connection.backward {
+            stroke: #ff6b6b;
+            stroke-width: 4;
+            filter: drop-shadow(0 0 8px rgba(255, 107, 107, 0.6));
+        }
+        
+        .weight-text {
+            font-size: 12px;
+            font-weight: bold;
+            fill: #FFD700;
+            text-anchor: middle;
+            dominant-baseline: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Backpropagation Visualization</h1>
+        <p class="subtitle">Watch how neural networks learn by propagating errors backward</p>
+        
+        <div class="info-panel">
+            <div class="step-info" id="step-info">
+                Click "Start Forward Pass" to see how data flows through the network
+            </div>
+            <div class="math-display" id="math-display">
+                Waiting to start...
+            </div>
+        </div>
+        
+        <div class="network-container">
+            <div class="network">
+                <svg width="900" height="500" style="position: absolute; top: 0; left: 0;">
+                    <!-- Connections will be drawn here -->
+                    <g id="connections"></g>
+                    <!-- Weight labels will be placed here -->
+                    <g id="weight-labels"></g>
+                </svg>
+                
+                <!-- Input Layer -->
+                <div class="neuron" id="x1" style="left: 50px; top: 150px;">
+                    <div class="layer-label">Input Layer</div>
+                    x₁<br>0.8
+                </div>
+                <div class="neuron" id="x2" style="left: 50px; top: 270px;">
+                    x₂<br>0.3
+                </div>
+                
+                <!-- Hidden Layer -->
+                <div class="neuron" id="h1" style="left: 350px; top: 100px;">
+                    <div class="layer-label">Hidden Layer</div>
+                    h₁<br><span id="h1-val">?</span>
+                </div>
+                <div class="neuron" id="h2" style="left: 350px; top: 320px;">
+                    h₂<br><span id="h2-val">?</span>
+                </div>
+                
+                <!-- Output Layer -->
+                <div class="neuron" id="output" style="left: 650px; top: 210px;">
+                    <div class="layer-label">Output Layer</div>
+                    Output<br><span id="output-val">?</span>
+                </div>
+            </div>
+        </div>
+        
+        <div class="controls">
+            <button class="btn primary" onclick="startForwardPass()">Start Forward Pass</button>
+            <button class="btn" onclick="startBackwardPass()" id="backward-btn" disabled>Start Backward Pass</button>
+            <button class="btn" onclick="updateWeights()" id="update-btn" disabled>Update Weights</button>
+            <button class="btn" onclick="reset()">Reset</button>
+        </div>
+        
+        <div class="info-panel">
+            <h3>How it works:</h3>
+            <p><strong>Forward Pass:</strong> Input data flows through the network, each neuron computes a weighted sum and applies an activation function.</p>
+            <p><strong>Backward Pass:</strong> Starting from the output error, gradients flow backward, showing how much each weight contributed to the error.</p>
+            <p><strong>Weight Update:</strong> Weights are adjusted proportionally to their contribution to the error, making the network more accurate.</p>
+            <p><strong>Target:</strong> We want the output to be 1.0, but our network predicts <span id="current-prediction">?</span></p>
+        </div>
+    </div>
+
+    <script>
+        let step = 0;
+        const target = 1.0;
+        let prediction = 0;
+        let weights = {
+            w11: 0.5, w12: -0.3, w21: 0.7, w22: 0.4, w31: 0.8, w32: -0.6
+        };
+        
+        // Neuron positions (center coordinates)
+        const positions = {
+            x1: {x: 90, y: 190},
+            x2: {x: 90, y: 310},
+            h1: {x: 390, y: 140},
+            h2: {x: 390, y: 360},
+            output: {x: 690, y: 250}
+        };
+        
+        function drawConnections() {
+            const svg = document.getElementById('connections');
+            const weightLabels = document.getElementById('weight-labels');
+            svg.innerHTML = '';
+            weightLabels.innerHTML = '';
+            
+            const connections = [
+                {from: 'x1', to: 'h1', weight: 'w11', value: weights.w11},
+                {from: 'x1', to: 'h2', weight: 'w12', value: weights.w12},
+                {from: 'x2', to: 'h1', weight: 'w21', value: weights.w21},
+                {from: 'x2', to: 'h2', weight: 'w22', value: weights.w22},
+                {from: 'h1', to: 'output', weight: 'w31', value: weights.w31},
+                {from: 'h2', to: 'output', weight: 'w32', value: weights.w32}
+            ];
+            
+            connections.forEach(conn => {
+                const fromPos = positions[conn.from];
+                const toPos = positions[conn.to];
+                
+                // Calculate connection points on circle circumference
+                const dx = toPos.x - fromPos.x;
+                const dy = toPos.y - fromPos.y;
+                const distance = Math.sqrt(dx * dx + dy * dy);
+                const radius = 40; // Half of neuron width/height
+                
+                // Start point (edge of source circle)
+                const startX = fromPos.x + (dx / distance) * radius;
+                const startY = fromPos.y + (dy / distance) * radius;
+                
+                // End point (edge of destination circle)
+                const endX = toPos.x - (dx / distance) * radius;
+                const endY = toPos.y - (dy / distance) * radius;
+                
+                // Create line element
+                const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                line.setAttribute('x1', startX);
+                line.setAttribute('y1', startY);
+                line.setAttribute('x2', endX);
+                line.setAttribute('y2', endY);
+                line.setAttribute('class', 'connection');
+                line.setAttribute('id', conn.weight);
+                svg.appendChild(line);
+                
+                // Add weight label at midpoint
+                const midX = (startX + endX) / 2;
+                const midY = (startY + endY) / 2;
+                
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.setAttribute('x', midX);
+                text.setAttribute('y', midY - 10);
+                text.setAttribute('class', 'weight-text');
+                text.textContent = `${conn.weight} = ${conn.value.toFixed(2)}`;
+                text.setAttribute('id', `${conn.weight}-label`);
+                weightLabels.appendChild(text);
+            });
+        }
+        
+        function sigmoid(x) {
+            return 1 / (1 + Math.exp(-x));
+        }
+        
+        function updateStepInfo(text) {
+            document.getElementById('step-info').textContent = text;
+        }
+        
+        function updateMathDisplay(text) {
+            document.getElementById('math-display').innerHTML = text;
+        }
+        
+        function activateNeuron(id) {
+            document.getElementById(id).classList.add('activated');
+            setTimeout(() => {
+                document.getElementById(id).classList.remove('activated');
+            }, 1000);
+        }
+        
+        function highlightConnection(id, type) {
+            const conn = document.getElementById(id);
+            if (conn) {
+                conn.classList.add(type);
+                setTimeout(() => {
+                    conn.classList.remove(type);
+                }, 1000);
+            }
+        }
+        
+        async function startForwardPass() {
+            step = 1;
+            updateStepInfo("Forward Pass: Computing hidden layer values...");
+            
+            // Calculate h1
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const h1_input = 0.8 * weights.w11 + 0.3 * weights.w21;
+            const h1 = sigmoid(h1_input);
+            document.getElementById('h1-val').textContent = h1.toFixed(3);
+            activateNeuron('h1');
+            highlightConnection('w11', 'forward');
+            highlightConnection('w21', 'forward');
+            updateMathDisplay(`h₁ = σ(${weights.w11} × 0.8 + ${weights.w21} × 0.3) = σ(${h1_input.toFixed(3)}) = ${h1.toFixed(3)}`);
+            
+            // Calculate h2
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const h2_input = 0.8 * weights.w12 + 0.3 * weights.w22;
+            const h2 = sigmoid(h2_input);
+            document.getElementById('h2-val').textContent = h2.toFixed(3);
+            activateNeuron('h2');
+            highlightConnection('w12', 'forward');
+            highlightConnection('w22', 'forward');
+            updateMathDisplay(`h₂ = σ(${weights.w12} × 0.8 + ${weights.w22} × 0.3) = σ(${h2_input.toFixed(3)}) = ${h2.toFixed(3)}`);
+            
+            // Calculate output
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const output_input = h1 * weights.w31 + h2 * weights.w32;
+            prediction = sigmoid(output_input);
+            document.getElementById('output-val').textContent = prediction.toFixed(3);
+            document.getElementById('current-prediction').textContent = prediction.toFixed(3);
+            activateNeuron('output');
+            highlightConnection('w31', 'forward');
+            highlightConnection('w32', 'forward');
+            updateMathDisplay(`Output = σ(${h1.toFixed(3)} × ${weights.w31} + ${h2.toFixed(3)} × ${weights.w32}) = ${prediction.toFixed(3)}`);
+            
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const error = Math.pow(target - prediction, 2) / 2;
+            updateStepInfo(`Forward pass complete! Prediction: ${prediction.toFixed(3)}, Target: ${target}, Error: ${error.toFixed(3)}`);
+            updateMathDisplay(`Error = ½(target - prediction)² = ½(${target} - ${prediction.toFixed(3)})² = ${error.toFixed(3)}`);
+            
+            document.getElementById('output').classList.add('error');
+            document.getElementById('backward-btn').disabled = false;
+        }
+        
+        async function startBackwardPass() {
+            step = 2;
+            updateStepInfo("Backward Pass: Computing gradients...");
+            
+            const h1 = parseFloat(document.getElementById('h1-val').textContent);
+            const h2 = parseFloat(document.getElementById('h2-val').textContent);
+            
+            // Output gradient
+            await new Promise(resolve => setTimeout(resolve, 500));
+            const output_gradient = prediction - target;
+            updateMathDisplay(`∂Error/∂Output = prediction - target = ${prediction.toFixed(3)} - ${target} = ${output_gradient.toFixed(3)}`);
+            
+            // Weight gradients for output layer
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const grad_w31 = output_gradient * h1;
+            const grad_w32 = output_gradient * h2;
+            highlightConnection('w31', 'backward');
+            highlightConnection('w32', 'backward');
+            updateMathDisplay(`∂Error/∂w₃₁ = ${output_gradient.toFixed(3)} × ${h1.toFixed(3)} = ${grad_w31.toFixed(3)}<br>∂Error/∂w₃₂ = ${output_gradient.toFixed(3)} × ${h2.toFixed(3)} = ${grad_w32.toFixed(3)}`);
+            
+            // Store gradients for weight update
+            window.gradients = {
+                grad_w31: grad_w31,
+                grad_w32: grad_w32,
+                grad_w11: output_gradient * weights.w31 * h1 * (1 - h1) * 0.8,
+                grad_w12: output_gradient * weights.w32 * h2 * (1 - h2) * 0.8,
+                grad_w21: output_gradient * weights.w31 * h1 * (1 - h1) * 0.3,
+                grad_w22: output_gradient * weights.w32 * h2 * (1 - h2) * 0.3
+            };
+            
+            // Hidden layer gradients
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            const grad_h1 = output_gradient * weights.w31 * h1 * (1 - h1);
+            const grad_h2 = output_gradient * weights.w32 * h2 * (1 - h2);
+            activateNeuron('h1');
+            activateNeuron('h2');
+            updateMathDisplay(`Hidden layer gradients:<br>∂Error/∂h₁ = ${output_gradient.toFixed(3)} × ${weights.w31} × ${h1.toFixed(3)} × ${(1-h1).toFixed(3)} = ${grad_h1.toFixed(3)}<br>∂Error/∂h₂ = ${output_gradient.toFixed(3)} × ${weights.w32} × ${h2.toFixed(3)} × ${(1-h2).toFixed(3)} = ${grad_h2.toFixed(3)}`);
+            
+            // Store hidden layer gradients as well
+            window.gradients.grad_h1 = grad_h1;
+            window.gradients.grad_h2 = grad_h2;
+            
+            // Input weight gradients
+            await new Promise(resolve => setTimeout(resolve, 1000));
+            highlightConnection('w11', 'backward');
+            highlightConnection('w12', 'backward');
+            highlightConnection('w21', 'backward');
+            highlightConnection('w22', 'backward');
+            updateStepInfo("Backward pass complete! All gradients computed.");
+            updateMathDisplay(`All gradients computed:<br><br><strong>Hidden layer gradients:</strong><br>∂Error/∂h₁ = ${grad_h1.toFixed(3)}<br>∂Error/∂h₂ = ${grad_h2.toFixed(3)}<br><br><strong>Input weight gradients:</strong><br>∂Error/∂w₁₁ = ${window.gradients.grad_w11.toFixed(3)}<br>∂Error/∂w₁₂ = ${window.gradients.grad_w12.toFixed(3)}<br>∂Error/∂w₂₁ = ${window.gradients.grad_w21.toFixed(3)}<br>∂Error/∂w₂₂ = ${window.gradients.grad_w22.toFixed(3)}`);
+            
+            document.getElementById('update-btn').disabled = false;
+        }
+        
+        function updateWeights() {
+            step = 3;
+            const learningRate = 0.1;
+            
+            if (!window.gradients) {
+                updateStepInfo("Error: Please run backward pass first!");
+                return;
+            }
+            
+            // Update weights using computed gradients
+            const oldWeights = {...weights};
+            
+            weights.w11 -= learningRate * window.gradients.grad_w11;
+            weights.w12 -= learningRate * window.gradients.grad_w12;
+            weights.w21 -= learningRate * window.gradients.grad_w21;
+            weights.w22 -= learningRate * window.gradients.grad_w22;
+            weights.w31 -= learningRate * window.gradients.grad_w31;
+            weights.w32 -= learningRate * window.gradients.grad_w32;
+            
+            // Redraw connections with new weights
+            drawConnections();
+            
+            updateStepInfo("Weights updated! The network should now make better predictions.");
+            updateMathDisplay(`<strong>Weight Update Formula:</strong> w_new = w_old - learning_rate × gradient<br><br>
+                <strong>Weight updates (learning rate = ${learningRate}):</strong><br>
+                w₁₁: ${oldWeights.w11.toFixed(3)} - ${learningRate} × ${window.gradients.grad_w11.toFixed(3)} = ${weights.w11.toFixed(3)}<br>
+                w₁₂: ${oldWeights.w12.toFixed(3)} - ${learningRate} × ${window.gradients.grad_w12.toFixed(3)} = ${weights.w12.toFixed(3)}<br>
+                w₂₁: ${oldWeights.w21.toFixed(3)} - ${learningRate} × ${window.gradients.grad_w21.toFixed(3)} = ${weights.w21.toFixed(3)}<br>
+                w₂₂: ${oldWeights.w22.toFixed(3)} - ${learningRate} × ${window.gradients.grad_w22.toFixed(3)} = ${weights.w22.toFixed(3)}<br>
+                w₃₁: ${oldWeights.w31.toFixed(3)} - ${learningRate} × ${window.gradients.grad_w31.toFixed(3)} = ${weights.w31.toFixed(3)}<br>
+                w₃₂: ${oldWeights.w32.toFixed(3)} - ${learningRate} × ${window.gradients.grad_w32.toFixed(3)} = ${weights.w32.toFixed(3)}`);
+            
+            document.getElementById('output').classList.remove('error');
+            
+            // Enable running another forward pass to see improvement
+            setTimeout(() => {
+                updateStepInfo("Try running forward pass again to see if the prediction improved!");
+                document.getElementById('backward-btn').disabled = true;
+                document.getElementById('update-btn').disabled = true;
+            }, 3000);
+        }
+        
+        function reset() {
+            step = 0;
+            weights = {
+                w11: 0.5, w12: -0.3, w21: 0.7, w22: 0.4, w31: 0.8, w32: -0.6
+            };
+            
+            document.getElementById('h1-val').textContent = '?';
+            document.getElementById('h2-val').textContent = '?';
+            document.getElementById('output-val').textContent = '?';
+            document.getElementById('current-prediction').textContent = '?';
+            
+            document.querySelectorAll('.neuron').forEach(n => {
+                n.classList.remove('activated', 'error');
+            });
+            
+            document.getElementById('backward-btn').disabled = true;
+            document.getElementById('update-btn').disabled = true;
+            
+            updateStepInfo("Click 'Start Forward Pass' to see how data flows through the network");
+            updateMathDisplay("Waiting to start...");
+            
+            drawConnections();
+        }
+        
+        // Initialize
+        drawConnections();
+        reset();
+    </script>
+</body>
+</html>
