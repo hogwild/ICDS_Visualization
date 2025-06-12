@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Interactive House Navigation Q-Learning</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: #f9fafb;
+            padding: 1.5rem;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        }
+
+        .title {
+            font-size: 1.875rem;
+            font-weight: bold;
+            text-align: center;
+            color: #1e40af;
+            margin-bottom: 1.5rem;
+        }
+
+        .main-grid {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 1.5rem;
+        }
+
+        .house-section {
+            background-color: #f9fafb;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+        }
+
+        .section-title {
+            font-size: 1.25rem;
+            font-weight: 600;
+            margin-bottom: 1rem;
+        }
+
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(16, 1fr);
+            gap: 1px;
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: #e5e7eb;
+            border: 2px solid #e5e7eb;
+            border-radius: 0.25rem;
+        }
+
+        .grid-cell {
+            aspect-ratio: 1;
+            border: 1px solid #d1d5db;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 0.75rem;
+            font-weight: bold;
+        }
+
+        .wall { background-color: #374151; border-color: #1f2937; }
+        .empty { background-color: #f3f4f6; border-color: #e5e7eb; }
+        .room-0 { background-color: #dbeafe; border-color: #d1d5db; }
+        .room-1 { background-color: #e9d5ff; border-color: #d1d5db; }
+        .room-2 { background-color: #fef3c7; border-color: #d1d5db; }
+        .room-3 { background-color: #fce7f3; border-color: #d1d5db; }
+        .room-4 { background-color: #fed7aa; border-color: #d1d5db; }
+        .room-5 { background-color: #bbf7d0; border-color: #d1d5db; }
+
+        .current-agent {
+            box-shadow: 0 0 0 4px #3b82f6;
+            position: relative;
+        }
+
+        .path-visited {
+            box-shadow: 0 0 0 2px #fbbf24;
+        }
+
+        .edit-hover-add:hover { background-color: #fecaca !important; border-color: #ef4444 !important; }
+        .edit-hover-remove:hover { background-color: #bbf7d0 !important; border-color: #10b981 !important; }
+
+        .controls-section {
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+        }
+
+        .control-panel {
+            background-color: #f9fafb;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .control-title {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.75rem;
+        }
+
+        .edit-mode-section {
+            padding: 0.75rem;
+            background: white;
+            border-radius: 0.25rem;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 0.75rem;
+        }
+
+        .edit-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .edit-tools {
+            display: flex;
+            gap: 0.5rem;
+            margin-left: 1rem;
+        }
+
+        .button {
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .button-green { background-color: #059669; color: white; }
+        .button-green:hover:not(:disabled) { background-color: #047857; }
+
+        .button-red { background-color: #dc2626; color: white; }
+        .button-red:hover:not(:disabled) { background-color: #b91c1c; }
+
+        .button-blue { background-color: #2563eb; color: white; }
+        .button-blue:hover:not(:disabled) { background-color: #1d4ed8; }
+
+        .button-orange { background-color: #ea580c; color: white; }
+        .button-orange:hover:not(:disabled) { background-color: #c2410c; }
+
+        .button-small {
+            padding: 0.25rem 0.75rem;
+            font-size: 0.875rem;
+        }
+
+        .button-active-red { background-color: #dc2626; color: white; }
+        .button-active-green { background-color: #059669; color: white; }
+        .button-inactive { background-color: #e5e7eb; color: #374151; }
+
+        .control-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .slider-container {
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .slider {
+            width: 100%;
+            margin: 0.25rem 0;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+        }
+
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 0.5rem;
+            font-size: 0.875rem;
+        }
+
+        .status-value {
+            font-family: monospace;
+        }
+
+        .q-table {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .q-cell {
+            padding: 0.25rem;
+            text-align: center;
+            font-size: 0.75rem;
+            font-family: monospace;
+            border-radius: 0.125rem;
+        }
+
+        .q-header { background-color: #e5e7eb; font-weight: bold; }
+        .q-row-header { background-color: #e5e7eb; font-weight: bold; }
+        .q-invalid { background-color: #f3f4f6; color: #9ca3af; }
+        .q-valid { background-color: white; }
+        .q-best { background-color: #bbf7d0; font-weight: bold; }
+
+        .legend {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 1rem;
+            margin-top: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .legend-box {
+            width: 1rem;
+            height: 1rem;
+            border-radius: 0.125rem;
+        }
+
+        .instructions {
+            background-color: #eff6ff;
+            padding: 1rem;
+            border-radius: 0.5rem;
+        }
+
+        .instructions h3 {
+            font-size: 1.125rem;
+            font-weight: 600;
+            margin-bottom: 0.5rem;
+        }
+
+        .instructions-section {
+            margin-bottom: 0.75rem;
+        }
+
+        .instructions-section strong {
+            display: block;
+            margin-bottom: 0.25rem;
+        }
+
+        .instructions ul {
+            margin-left: 1rem;
+            font-size: 0.875rem;
+        }
+
+        .instructions li {
+            margin-bottom: 0.25rem;
+        }
+
+        @media (max-width: 1200px) {
+            .main-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Interactive House Navigation Q-Learning</h1>
+        
+        <div class="main-grid">
+            <!-- House Visualization -->
+            <div class="house-section">
+                <h2 class="section-title">House Layout</h2>
+                <div id="grid-container" class="grid-container"></div>
+                
+                <div class="legend">
+                    <div class="legend-item">
+                        <div class="legend-box current-agent" style="background-color: #3b82f6;"></div>
+                        <span>Current Agent</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box room-5"></div>
+                        <span>Goal (Exit)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box path-visited" style="background-color: #fbbf24;"></div>
+                        <span>Path Taken</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-box wall"></div>
+                        <span>Walls</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls and Info -->
+            <div class="controls-section">
+                <!-- Controls -->
+                <div class="control-panel">
+                    <h3 class="control-title">Controls</h3>
+                    
+                    <!-- Edit Mode -->
+                    <div class="edit-mode-section">
+                        <div class="edit-controls">
+                            <label>
+                                <input type="checkbox" id="editMode"> Edit Mode
+                            </label>
+                            <div id="editTools" class="edit-tools" style="display: none;">
+                                <button id="addWallBtn" class="button button-small button-active-red">Add Walls</button>
+                                <button id="removeWallBtn" class="button button-small button-inactive">Remove Walls</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Training Controls -->
+                    <div class="control-group">
+                        <button id="startBtn" class="button button-green">Start Training</button>
+                        <button id="stopBtn" class="button button-red" disabled>Stop Training</button>
+                        <button id="resetAgentBtn" class="button button-blue">Reset Agent</button>
+                        <button id="resetWallsBtn" class="button button-orange">Reset Walls</button>
+                    </div>
+
+                    <!-- Max Episodes -->
+                    <div class="edit-mode-section">
+                        <div class="slider-container">
+                            <label>Max Episodes: <span id="maxEpisodesValue">50</span></label>
+                            <input type="range" id="maxEpisodes" class="slider" min="10" max="200" step="10" value="50">
+                            <div class="help-text">Training will automatically stop after this many episodes</div>
+                        </div>
+                    </div>
+
+                    <!-- Parameters -->
+                    <div class="control-group">
+                        <div class="slider-container">
+                            <label>γ (Discount Factor): <span id="gammaValue">0.8</span></label>
+                            <input type="range" id="gamma" class="slider" min="0" max="1" step="0.1" value="0.8">
+                            <div class="help-text">Higher = values future rewards more</div>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>ε (Exploration Rate): <span id="epsilonValue">0.3</span></label>
+                            <input type="range" id="epsilon" class="slider" min="0" max="1" step="0.1" value="0.3">
+                            <div class="help-text">Higher = more exploration vs exploitation</div>
+                        </div>
+                        
+                        <div class="slider-container">
+                            <label>Speed: <span id="speedValue">1500</span>ms</label>
+                            <input type="range" id="speed" class="slider" min="800" max="3000" step="200" value="1500">
+                            <div class="help-text">Slower = easier to follow agent movement</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Status -->
+                <div class="control-panel">
+                    <h3 class="control-title">Status</h3>
+                    <div class="status-item">
+                        <span><strong>Current Room:</strong></span>
+                        <span id="currentRoom" class="status-value">2</span>
+                    </div>
+                    <div class="status-item">
+                        <span><strong>Episodes:</strong></span>
+                        <span id="episodeCount" class="status-value">0 / 50</span>
+                    </div>
+                    <div class="status-item">
+                        <span><strong>Mode:</strong></span>
+                        <span id="currentMode" class="status-value">Stopped</span>
+                    </div>
+                    <div>
+                        <strong>Path:</strong>
+                        <div id="currentPath" class="status-value" style="font-size: 0.75rem; margin-top: 0.25rem; word-break: break-all;">2</div>
+                    </div>
+                </div>
+
+                <!-- Q-Values -->
+                <div class="control-panel">
+                    <h3 class="control-title">Q-Values (5×6 Table)</h3>
+                    <div class="help-text" style="margin-bottom: 0.5rem;">Rows = Current Room, Columns = Next Room</div>
+                    <div id="qTable" class="q-table"></div>
+                    <div class="legend-item" style="margin-top: 0.5rem;">
+                        <div class="legend-box q-best"></div>
+                        <span style="font-size: 0.75rem;">Best action for each room</span>
+                    </div>
+                </div>
+
+                <!-- Instructions -->
+                <div class="instructions">
+                    <h3>Instructions</h3>
+                    <div class="instructions-section">
+                        <strong>Normal Mode:</strong>
+                        <ul>
+                            <li>Click on any room (0-4) to place the agent</li>
+                            <li>Start training to watch Q-learning in action</li>
+                            <li>Blue ring = current agent position</li>
+                            <li>Yellow ring = rooms visited in current episode</li>
+                        </ul>
+                    </div>
+                    
+                    <div class="instructions-section">
+                        <strong>Edit Mode:</strong>
+                        <ul>
+                            <li>Toggle Edit Mode to modify walls</li>
+                            <li>Red tool = Add walls (click empty spaces)</li>
+                            <li>Green tool = Remove walls (click existing walls)</li>
+                            <li>Create custom layouts and test Q-learning</li>
+                            <li>Reset Walls to restore original layout</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Global state
+        let state = {
+            walls: new Set([
+                // Outer boundary
+                '2,2', '3,2', '4,2', '5,2', '6,2', '7,2', '8,2', '10,2', '11,2', '12,2', '13,2',
+                '2,9', '3,9', '5,9', '6,9', '7,9', '8,9', '9,9', '10,9', '11,9', '12,9', '13,9',
+                '2,3', '2,4', '2,5', '2,6', '2,7', '2,8',
+                '13,3', '13,4', '13,5', '13,6', '13,7', '13,8',
+                // Internal walls
+                '7,2', '7,3', '7,4', '7,5', '7,6', '7,7',
+                '3,6', '4,6', '5,6', '9,6', '10,6',
+                '10,2', '10,3', '10,4', '10,5', '10,7',
+            ]),
+            qTable: {},
+            currentState: 2,
+            isTraining: false,
+            isRunning: false,
+            path: [2],
+            gamma: 0.8,
+            epsilon: 0.3,
+            speed: 1500,
+            totalEpisodes: 0,
+            maxEpisodes: 50,
+            isExploring: false,
+            isEditMode: false,
+            editTool: 'add'
+        };
+
+        // Dynamic room connections based on current walls
+        function getConnections() {
+            const connections = {
+                0: [], 1: [], 2: [], 3: [], 4: [], 5: []
+            };
+            
+            // Check each room's possible connections by examining adjacent cells
+            for (let roomId = 0; roomId <= 5; roomId++) {
+                const roomCells = getRoomCells(roomId);
+                const connectedRooms = new Set();
+                
+                for (let cell of roomCells) {
+                    const [x, y] = cell.split(',').map(Number);
+                    
+                    // Check all 4 adjacent directions
+                    const adjacent = [
+                        [x-1, y], [x+1, y], [x, y-1], [x, y+1]
+                    ];
+                    
+                    for (let [adjX, adjY] of adjacent) {
+                        const adjKey = `${adjX},${adjY}`;
+                        
+                        // Skip if adjacent cell is a wall
+                        if (state.walls.has(adjKey)) continue;
+                        
+                        // Check if adjacent cell belongs to a different room
+                        const adjContent = getCellContent(adjX, adjY);
+                        if (adjContent.type === 'room' || adjContent.type === 'room_area') {
+                            if (adjContent.id !== roomId) {
+                                connectedRooms.add(adjContent.id);
+                            }
+                        }
+                    }
+                }
+                
+                connections[roomId] = Array.from(connectedRooms);
+            }
+            
+            return connections;
+        }
+
+        // Get all cells that belong to a specific room
+        function getRoomCells(roomId) {
+            const cells = [];
+            
+            for (let y = 0; y < 12; y++) {
+                for (let x = 0; x < 16; x++) {
+                    const content = getCellContent(x, y);
+                    if ((content.type === 'room' || content.type === 'room_area') && content.id === roomId) {
+                        cells.push(`${x},${y}`);
+                    }
+                }
+            }
+            
+            return cells;
+        }
+
+        // Dynamic reward matrix based on current connections
+        function getRewardMatrix() {
+            const connections = getConnections();
+            const rewardMatrix = {};
+            
+            // Initialize all rooms
+            for (let fromRoom = 0; fromRoom <= 5; fromRoom++) {
+                rewardMatrix[fromRoom] = {};
+                
+                // Get valid connections for this room
+                const validConnections = connections[fromRoom] || [];
+                
+                for (let toRoom of validConnections) {
+                    if (toRoom === 5) {
+                        // High reward for reaching the exit
+                        rewardMatrix[fromRoom][toRoom] = 100;
+                    } else if (fromRoom === 5) {
+                        // High reward for connections from exit (bidirectional)
+                        rewardMatrix[fromRoom][toRoom] = 100;
+                    } else {
+                        // Normal reward for room-to-room movement
+                        rewardMatrix[fromRoom][toRoom] = 0;
+                    }
+                }
+            }
+            
+            return rewardMatrix;
+        }
+
+        // Room definitions
+        const rooms = {
+            0: { center: [5, 4], color: 'room-0', label: '0' },
+            1: { center: [9, 4], color: 'room-1', label: '1' },
+            2: { center: [12, 5], color: 'room-2', label: '2' },
+            3: { center: [8, 8], color: 'room-3', label: '3' },
+            4: { center: [5, 8], color: 'room-4', label: '4' },
+            5: { center: [8, 0], color: 'room-5', label: '5 (Exit)' }
+        };
+
+        // Initialize Q-table
+        function initializeQTable() {
+            const table = {};
+            for (let currentRoom = 0; currentRoom <= 4; currentRoom++) {
+                table[currentRoom] = {};
+                for (let nextRoom = 0; nextRoom <= 5; nextRoom++) {
+                    table[currentRoom][nextRoom] = 0;
+                }
+            }
+            return table;
+        }
+
+        // Get cell content
+        function getCellContent(x, y) {
+            const key = `${x},${y}`;
+            
+            if (state.walls.has(key)) {
+                return 'wall';
+            }
+            
+            // Check room centers
+            for (let [roomId, room] of Object.entries(rooms)) {
+                if (room.center[0] === x && room.center[1] === y) {
+                    return { type: 'room', id: parseInt(roomId), ...room };
+                }
+            }
+            
+            // Define room areas
+            if ((x >= 3 && x <= 6 && y >= 3 && y <= 5) || (x === 6 && y === 6)) {
+                if (!state.walls.has(key)) {
+                    return { type: 'room_area', id: 0, ...rooms[0] };
+                }
+            }
+            if ((x >= 8 && x <= 9 && y >= 3 && y <= 5) || (x === 9 && y === 2)) {
+                if (!state.walls.has(key)) {
+                    return { type: 'room_area', id: 1, ...rooms[1] };
+                }
+            }
+            if (x >= 11 && x <= 12 && y >= 3 && y <= 8 && !state.walls.has(key)) {
+                return { type: 'room_area', id: 2, ...rooms[2] };
+            }
+            if ((x >= 7 && x <= 10 && y >= 7 && y <= 8) || (x === 8 && y === 6)) {
+                if (!state.walls.has(key)) {
+                    return { type: 'room_area', id: 3, ...rooms[3] };
+                }
+            }
+            if ((x >= 3 && x <= 6 && y >= 7 && y <= 8) || (x === 4 && y === 9)) {
+                if (!state.walls.has(key)) {
+                    return { type: 'room_area', id: 4, ...rooms[4] };
+                }
+            }
+            
+            // Room 5 (Exit) - all outside areas
+            if ((y <= 1) || (y >= 10) || (x <= 1) || (x >= 14) || !state.walls.has(key)) {
+                if (!((x >= 3 && x <= 6 && y >= 3 && y <= 5) || (x === 6 && y === 6) ||
+                      (x >= 8 && x <= 9 && y >= 3 && y <= 5) || (x === 9 && y === 2) ||
+                      (x >= 11 && x <= 12 && y >= 3 && y <= 8) ||
+                      (x >= 7 && x <= 10 && y >= 7 && y <= 8) || (x === 8 && y === 6) ||
+                      (x >= 3 && x <= 6 && y >= 7 && y <= 8) || (x === 4 && y === 9))) {
+                    return { type: 'room_area', id: 5, ...rooms[5] };
+                }
+            }
+            
+            return 'empty';
+        }
+
+        // Get cell classes
+        function getCellClass(x, y) {
+            const content = getCellContent(x, y);
+            let classes = ['grid-cell'];
+            
+            if (content === 'wall') {
+                classes.push('wall');
+            } else if (content === 'empty') {
+                classes.push('empty');
+            } else if (content.type === 'room' || content.type === 'room_area') {
+                classes.push(content.color);
+                
+                if (content.id === state.currentState) {
+                    classes.push('current-agent');
+                }
+                
+                if (state.path.includes(content.id) && content.id !== state.currentState) {
+                    classes.push('path-visited');
+                }
+            } else {
+                classes.push('empty');
+            }
+            
+            // Add edit mode hover classes
+            if (state.isEditMode) {
+                if (state.editTool === 'add') {
+                    classes.push('edit-hover-add');
+                } else {
+                    classes.push('edit-hover-remove');
+                }
+            }
+            
+            return classes.join(' ');
+        }
+
+        // Create grid
+        function createGrid() {
+            const container = document.getElementById('grid-container');
+            container.innerHTML = '';
+            
+            for (let y = 0; y < 12; y++) {
+                for (let x = 0; x < 16; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = getCellClass(x, y);
+                    cell.dataset.x = x;
+                    cell.dataset.y = y;
+                    
+                    const content = getCellContent(x, y);
+                    if (content.type === 'room') {
+                        const label = document.createElement('div');
+                        label.textContent = content.label;
+                        label.style.fontSize = '0.75rem';
+                        label.style.color = content.id === 5 ? '#065f46' : '#374151';
+                        cell.appendChild(label);
+                        
+                        if (content.id === state.currentState) {
+                            const agent = document.createElement('div');
+                            agent.textContent = '🤖';
+                            agent.style.fontSize = '0.75rem';
+                            agent.style.color = '#2563eb';
+                            agent.style.marginTop = '0.125rem';
+                            cell.appendChild(agent);
+                        }
+                    }
+                    
+                    cell.addEventListener('click', () => handleCellClick(x, y));
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        // Handle cell click
+        function handleCellClick(x, y) {
+            const content = getCellContent(x, y);
+            
+            if (state.isEditMode) {
+                toggleWall(x, y);
+            } else if (content.type === 'room' && content.id !== 5 && !state.isTraining) {
+                placeAgent(content.id);
+            }
+        }
+
+        // Toggle wall
+        function toggleWall(x, y) {
+            const key = `${x},${y}`;
+            
+            if (state.editTool === 'add') {
+                state.walls.add(key);
+            } else {
+                state.walls.delete(key);
+            }
+            
+            updateDisplay();
+            if (!state.isTraining) {
+                resetAgent();
+            }
+        }
+
+        // Place agent
+        function placeAgent(roomId) {
+            state.currentState = roomId;
+            state.path = [roomId];
+            updateDisplay();
+        }
+
+        // Q-learning functions
+        function getValidActions(currentRoom) {
+            const connections = getConnections();
+            return connections[currentRoom] || [];
+        }
+
+        function epsilonGreedy(currentRoom) {
+            const validNextRooms = getValidActions(currentRoom);
+            if (validNextRooms.length === 0) return null;
+
+            const willExplore = Math.random() < state.epsilon;
+            state.isExploring = willExplore;
+
+            if (willExplore) {
+                return validNextRooms[Math.floor(Math.random() * validNextRooms.length)];
+            } else {
+                let bestNextRoom = validNextRooms[0];
+                let bestValue = state.qTable[currentRoom][bestNextRoom];
+                
+                for (let nextRoom of validNextRooms) {
+                    if (state.qTable[currentRoom][nextRoom] > bestValue) {
+                        bestValue = state.qTable[currentRoom][nextRoom];
+                        bestNextRoom = nextRoom;
+                    }
+                }
+                return bestNextRoom;
+            }
+        }
+
+        function updateQValue(currentRoom, nextRoom, reward) {
+            let maxNextQ = 0;
+            
+            if (nextRoom !== 5) {
+                const validFromNext = getValidActions(nextRoom);
+                if (validFromNext.length > 0) {
+                    maxNextQ = Math.max(...validFromNext.map(room => state.qTable[nextRoom][room]));
+                }
+            }
+
+            const newQ = reward + state.gamma * maxNextQ;
+            state.qTable[currentRoom][nextRoom] = newQ;
+        }
+
+        function getBestNextRoom(currentRoom) {
+            const validNextRooms = getValidActions(currentRoom);
+            if (validNextRooms.length === 0) return null;
+            
+            let bestNextRoom = validNextRooms[0];
+            let bestValue = state.qTable[currentRoom][bestNextRoom];
+            
+            for (let nextRoom of validNextRooms) {
+                if (state.qTable[currentRoom][nextRoom] > bestValue) {
+                    bestValue = state.qTable[currentRoom][nextRoom];
+                    bestNextRoom = nextRoom;
+                }
+            }
+            return bestNextRoom;
+        }
+
+        // Training functions
+        async function runEpisode() {
+            if (!state.isTraining || !state.isRunning) return;
+
+            let currentRoom = Math.floor(Math.random() * 5);
+            const episodePath = [currentRoom];
+            
+            state.currentState = currentRoom;
+            state.path = [currentRoom];
+            updateDisplay();
+            
+            await sleep(Math.max(state.speed / 3, 300));
+
+            let stepCount = 0;
+            while (currentRoom !== 5 && stepCount < 15) {
+                if (!state.isTraining || !state.isRunning) break;
+                
+                const nextRoom = epsilonGreedy(currentRoom);
+                if (nextRoom === null) break;
+
+                const reward = getRewardMatrix()[currentRoom]?.[nextRoom] || 0;
+                updateQValue(currentRoom, nextRoom, reward);
+                
+                currentRoom = nextRoom;
+                episodePath.push(currentRoom);
+                stepCount++;
+                
+                state.currentState = currentRoom;
+                state.path = [...episodePath];
+                updateDisplay();
+                
+                await sleep(state.speed);
+                
+                if (currentRoom === 5) break;
+            }
+
+            state.totalEpisodes++;
+            state.isExploring = false;
+            updateDisplay();
+            
+            if (state.totalEpisodes >= state.maxEpisodes) {
+                stopTraining();
+                return;
+            }
+            
+            await sleep(Math.max(state.speed, 800));
+            
+            if (state.isTraining && state.isRunning) {
+                setTimeout(runEpisode, 500);
+            }
+        }
+
+        function sleep(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
+        // Control functions
+        function startTraining() {
+            if (!state.isTraining) {
+                state.isTraining = true;
+                state.isRunning = true;
+                updateDisplay();
+                runEpisode();
+            }
+        }
+
+        function stopTraining() {
+            state.isTraining = false;
+            state.isRunning = false;
+            state.isExploring = false;
+            updateDisplay();
+        }
+
+        function resetAgent() {
+            stopTraining();
+            state.qTable = initializeQTable();
+            state.currentState = 2;
+            state.path = [2];
+            state.totalEpisodes = 0;
+            state.isExploring = false;
+            updateDisplay();
+        }
+
+        function resetWalls() {
+            state.walls = new Set([
+                // Outer boundary
+                '2,2', '3,2', '4,2', '5,2', '6,2', '7,2', '8,2', '10,2', '11,2', '12,2', '13,2',
+                '2,9', '3,9', '5,9', '6,9', '7,9', '8,9', '9,9', '10,9', '11,9', '12,9', '13,9',
+                '2,3', '2,4', '2,5', '2,6', '2,7', '2,8',
+                '13,3', '13,4', '13,5', '13,6', '13,7', '13,8',
+                // Internal walls
+                '7,2', '7,3', '7,4', '7,5', '7,6', '7,7',
+                '3,6', '4,6', '5,6', '9,6', '10,6',
+                '10,2', '10,3', '10,4', '10,5', '10,7',
+            ]);
+            resetAgent();
+        }
+
+        // Update display
+        function updateDisplay() {
+            createGrid();
+            updateQTable();
+            updateStatus();
+            updateControls();
+        }
+
+        function updateQTable() {
+            const container = document.getElementById('qTable');
+            container.innerHTML = '';
+            
+            // Get current connections
+            const connections = getConnections();
+            
+            // Header row
+            const headers = ['From\\To', '0', '1', '2', '3', '4', 'Exit'];
+            headers.forEach(header => {
+                const cell = document.createElement('div');
+                cell.className = 'q-cell q-header';
+                cell.textContent = header;
+                container.appendChild(cell);
+            });
+            
+            // Data rows
+            for (let currentRoom = 0; currentRoom <= 4; currentRoom++) {
+                // Row header
+                const rowHeader = document.createElement('div');
+                rowHeader.className = 'q-cell q-row-header';
+                rowHeader.textContent = currentRoom.toString();
+                container.appendChild(rowHeader);
+                
+                // Q-values
+                for (let nextRoom = 0; nextRoom <= 5; nextRoom++) {
+                    const cell = document.createElement('div');
+                    const qValue = state.qTable[currentRoom][nextRoom];
+                    const isValid = connections[currentRoom]?.includes(nextRoom);
+                    const isBest = getBestNextRoom(currentRoom) === nextRoom && qValue > 0;
+                    
+                    cell.className = `q-cell ${!isValid ? 'q-invalid' : isBest ? 'q-best' : 'q-valid'}`;
+                    cell.textContent = isValid ? qValue.toFixed(1) : '—';
+                    container.appendChild(cell);
+                }
+            }
+        }
+
+        function updateStatus() {
+            document.getElementById('currentRoom').textContent = state.currentState;
+            document.getElementById('episodeCount').textContent = `${state.totalEpisodes} / ${state.maxEpisodes}`;
+            document.getElementById('currentPath').textContent = state.path.join(' → ');
+            
+            let mode = 'Stopped';
+            if (state.isTraining) {
+                mode = state.isExploring ? 'Exploring' : 'Exploiting';
+            }
+            document.getElementById('currentMode').textContent = mode;
+            document.getElementById('currentMode').style.color = state.isExploring ? '#ea580c' : '#2563eb';
+        }
+
+        function updateControls() {
+            const startBtn = document.getElementById('startBtn');
+            const stopBtn = document.getElementById('stopBtn');
+            const editMode = document.getElementById('editMode');
+            
+            startBtn.disabled = state.isTraining || state.isEditMode;
+            stopBtn.disabled = !state.isTraining;
+            
+            startBtn.textContent = state.isTraining ? 'Training...' : 'Start Training';
+            
+            // Update parameter controls
+            document.getElementById('gamma').disabled = state.isTraining;
+            document.getElementById('epsilon').disabled = state.isTraining;
+            document.getElementById('speed').disabled = state.isTraining;
+            document.getElementById('maxEpisodes').disabled = state.isTraining;
+        }
+
+        // Event listeners
+        function setupEventListeners() {
+            // Training controls
+            document.getElementById('startBtn').addEventListener('click', startTraining);
+            document.getElementById('stopBtn').addEventListener('click', stopTraining);
+            document.getElementById('resetAgentBtn').addEventListener('click', resetAgent);
+            document.getElementById('resetWallsBtn').addEventListener('click', resetWalls);
+            
+            // Edit mode
+            document.getElementById('editMode').addEventListener('change', (e) => {
+                state.isEditMode = e.target.checked;
+                document.getElementById('editTools').style.display = state.isEditMode ? 'flex' : 'none';
+                updateDisplay();
+            });
+            
+            document.getElementById('addWallBtn').addEventListener('click', () => {
+                state.editTool = 'add';
+                document.getElementById('addWallBtn').className = 'button button-small button-active-red';
+                document.getElementById('removeWallBtn').className = 'button button-small button-inactive';
+            });
+            
+            document.getElementById('removeWallBtn').addEventListener('click', () => {
+                state.editTool = 'remove';
+                document.getElementById('addWallBtn').className = 'button button-small button-inactive';
+                document.getElementById('removeWallBtn').className = 'button button-small button-active-green';
+            });
+            
+            // Parameters
+            document.getElementById('gamma').addEventListener('input', (e) => {
+                state.gamma = parseFloat(e.target.value);
+                document.getElementById('gammaValue').textContent = state.gamma;
+            });
+            
+            document.getElementById('epsilon').addEventListener('input', (e) => {
+                state.epsilon = parseFloat(e.target.value);
+                document.getElementById('epsilonValue').textContent = state.epsilon;
+            });
+            
+            document.getElementById('speed').addEventListener('input', (e) => {
+                state.speed = parseInt(e.target.value);
+                document.getElementById('speedValue').textContent = state.speed;
+            });
+            
+            document.getElementById('maxEpisodes').addEventListener('input', (e) => {
+                state.maxEpisodes = parseInt(e.target.value);
+                document.getElementById('maxEpisodesValue').textContent = state.maxEpisodes;
+                updateStatus();
+            });
+        }
+
+        // Initialize
+        function init() {
+            state.qTable = initializeQTable();
+            setupEventListeners();
+            updateDisplay();
+        }
+
+        // Start the application
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>
