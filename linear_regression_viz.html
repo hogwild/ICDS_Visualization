@@ -1,0 +1,1143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Linear Regression & Gradient Descent Visualization</title>
+    <script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1600px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(15px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 3em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500, #FF6B6B);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            font-weight: bold;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.3em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+            font-weight: 300;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 25px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            align-items: center;
+        }
+        
+        .control-group {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 18px 22px;
+            border-radius: 15px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .control-group:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .control-group label {
+            font-weight: 600;
+            min-width: 120px;
+            font-size: 0.95em;
+        }
+        
+        input[type="range"] {
+            width: 150px;
+            height: 8px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 22px;
+            height: 22px;
+            border-radius: 50%;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            cursor: pointer;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.3);
+            transition: all 0.3s ease;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb:hover {
+            transform: scale(1.1);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.4);
+        }
+        
+        input[type="number"] {
+            width: 90px;
+            padding: 10px 12px;
+            border: none;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-weight: 600;
+            font-size: 0.95em;
+            transition: all 0.3s ease;
+        }
+        
+        input[type="number"]:focus {
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.3);
+        }
+        
+        .action-btn {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            padding: 14px 28px;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .action-btn:before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        .action-btn:hover:before {
+            left: 100%;
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .reset-btn {
+            background: linear-gradient(45deg, #9B59B6, #3498DB);
+        }
+        
+        .step-btn {
+            background: linear-gradient(45deg, #E67E22, #F39C12);
+        }
+        
+        .visualization {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+        }
+        
+        .chart-container {
+            flex: 1;
+            min-width: 300px;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            padding: 25px;
+            position: relative;
+            box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+        }
+        
+        .chart-title {
+            text-align: center;
+            color: #2c3e50;
+            font-weight: bold;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+        
+        .info-panel {
+            min-width: 350px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 25px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .info-panel h3 {
+            margin-top: 0;
+            color: #FFD700;
+            font-size: 1.5em;
+            text-align: center;
+        }
+        
+        .result-box {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 18px;
+            border-radius: 12px;
+            margin: 18px 0;
+            text-align: center;
+            font-weight: bold;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .equation-box {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 18px;
+            border-radius: 12px;
+            margin: 18px 0;
+            font-family: 'Courier New', monospace;
+            text-align: center;
+            font-size: 1.1em;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .gradient-info {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 18px;
+            border-radius: 12px;
+            margin: 18px 0;
+            max-height: 250px;
+            overflow-y: auto;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+        
+        .iteration-item {
+            padding: 8px 12px;
+            margin: 5px 0;
+            border-radius: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 0.9em;
+            transition: all 0.3s ease;
+        }
+        
+        .iteration-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 35px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.15);
+            padding: 12px 18px;
+            border-radius: 12px;
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            transition: all 0.3s ease;
+        }
+        
+        .legend-item:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-2px);
+        }
+        
+        .legend-dot {
+            width: 14px;
+            height: 14px;
+            border-radius: 50%;
+        }
+        
+        .legend-line {
+            width: 25px;
+            height: 4px;
+            border-radius: 2px;
+        }
+        
+        .axis {
+            font-size: 12px;
+        }
+        
+        .axis path,
+        .axis line {
+            fill: none;
+            stroke: #666;
+            shape-rendering: crispEdges;
+        }
+        
+        .grid line {
+            stroke: #e0e0e0;
+            stroke-dasharray: 2,2;
+            shape-rendering: crispEdges;
+        }
+        
+        .grid path {
+            stroke-width: 0;
+        }
+        
+        .data-point {
+            fill: #3498DB;
+            stroke: #2980B9;
+            stroke-width: 1.5;
+        }
+        
+        .regression-line {
+            fill: none;
+            stroke: #E74C3C;
+            stroke-width: 3;
+        }
+        
+        .optimal-line {
+            fill: none;
+            stroke: #2ECC71;
+            stroke-width: 2;
+            stroke-dasharray: 5,5;
+        }
+        
+        .loss-line {
+            fill: none;
+            stroke: #9B59B6;
+            stroke-width: 2;
+        }
+        
+        .loss-point {
+            fill: #E74C3C;
+            stroke: #C0392B;
+            stroke-width: 2;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">Linear Regression & Gradient Descent</h1>
+        <p class="subtitle">Old Faithful Geyser Dataset - Predicting Waiting Time from Eruption Duration</p>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>Learning Rate (λ):</label>
+                <input type="range" id="learningRateSlider" min="0.001" max="0.1" step="0.001" value="0.01">
+                <span id="learningRateValue">0.01</span>
+            </div>
+            <div class="control-group">
+                <label>Initial Weight (w):</label>
+                <input type="number" id="initialWeight" min="-2" max="3" step="0.1" value="0.5">
+            </div>
+            <button class="action-btn step-btn" id="stepBtn">Single Step</button>
+            <button class="action-btn" id="runBtn">Run to Convergence</button>
+            <button class="action-btn reset-btn" id="resetBtn">Reset</button>
+        </div>
+        
+        <div class="visualization">
+            <div class="chart-container">
+                <div class="chart-title">Data & Regression Line</div>
+                <div id="regressionChart"></div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Loss vs Iterations</div>
+                <div id="lossChart"></div>
+            </div>
+            <div class="chart-container">
+                <div class="chart-title">Loss Function & Gradient Descent Path</div>
+                <div id="lossFunctionChart"></div>
+            </div>
+        </div>
+        
+        <div class="info-panel">
+            <h3>Gradient Descent Progress</h3>
+            <div class="result-box" id="currentStatus">
+                Click "Single Step" or "Run to Convergence" to start
+            </div>
+            
+            <div class="equation-box">
+                <strong>Model:</strong> y = w × x<br>
+                <strong>Current:</strong> <span id="currentEquation">y = 0.5 × x</span><br>
+                <strong>Optimal:</strong> <span id="optimalEquation">y = ? × x</span>
+            </div>
+            
+            <div class="result-box">
+                <strong>Training Error:</strong> <span id="trainingError">--</span><br>
+                <strong>Gradient:</strong> <span id="currentGradient">--</span><br>
+                <strong>Step:</strong> <span id="currentStep">0</span>
+            </div>
+            
+            <h4>Recent Iterations:</h4>
+            <div class="gradient-info" id="iterationHistory">
+                No iterations yet...
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot" style="background-color: #3498DB;"></div>
+                <span>Training Data</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #E74C3C;"></div>
+                <span>Current Regression Line</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background-color: #F39C12;"></div>
+                <span>Current Position</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-line" style="background-color: #E74C3C; background-image: repeating-linear-gradient(45deg, transparent, transparent 2px, rgba(255,255,255,.3) 2px, rgba(255,255,255,.3) 4px);"></div>
+                <span>Gradient Descent Path</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Old Faithful Geyser Dataset (subset for visualization)
+        const faithfulData = [
+            {eruption: 3.6, waiting: 79}, {eruption: 1.8, waiting: 54}, {eruption: 3.333, waiting: 74},
+            {eruption: 2.283, waiting: 62}, {eruption: 4.533, waiting: 85}, {eruption: 2.883, waiting: 55},
+            {eruption: 4.7, waiting: 88}, {eruption: 3.6, waiting: 85}, {eruption: 1.95, waiting: 51},
+            {eruption: 4.35, waiting: 85}, {eruption: 2.2, waiting: 54}, {eruption: 1.833, waiting: 47},
+            {eruption: 4.8, waiting: 95}, {eruption: 4.7, waiting: 83}, {eruption: 4.85, waiting: 78},
+            {eruption: 1.6, waiting: 52}, {eruption: 4.25, waiting: 83}, {eruption: 1.8, waiting: 52},
+            {eruption: 1.75, waiting: 50}, {eruption: 4.633, waiting: 78}, {eruption: 2.0, waiting: 54},
+            {eruption: 4.917, waiting: 83}, {eruption: 1.75, waiting: 47}, {eruption: 4.7, waiting: 83},
+            {eruption: 2.167, waiting: 62}, {eruption: 1.75, waiting: 51}, {eruption: 4.8, waiting: 81},
+            {eruption: 1.6, waiting: 43}, {eruption: 4.25, waiting: 77}, {eruption: 1.8, waiting: 49},
+            {eruption: 1.75, waiting: 50}, {eruption: 4.85, waiting: 78}, {eruption: 3.833, waiting: 81},
+            {eruption: 3.717, waiting: 76}, {eruption: 4.4, waiting: 84}, {eruption: 1.817, waiting: 58},
+            {eruption: 4.4, waiting: 83}, {eruption: 2.0, waiting: 43}, {eruption: 4.7, waiting: 81},
+            {eruption: 2.167, waiting: 77}, {eruption: 4.8, waiting: 81}, {eruption: 2.0, waiting: 59},
+            {eruption: 1.75, waiting: 54}, {eruption: 1.8, waiting: 42}, {eruption: 4.85, waiting: 90},
+            {eruption: 2.167, waiting: 61}, {eruption: 4.7, waiting: 78}, {eruption: 1.833, waiting: 54}
+        ];
+
+        // Chart dimensions
+        const margin = {top: 20, right: 30, bottom: 50, left: 60};
+        const width = 500 - margin.left - margin.right;
+        const height = 350 - margin.bottom - margin.top;
+        
+        let currentWeight = 0.5;
+        let learningRate = 0.01;
+        let step = 0;
+        let isRunning = false;
+        let iterationHistory = [];
+        let optimalWeight = null;
+        
+        // D3 chart variables
+        let regressionSvg, lossSvg, lossFunctionSvg;
+        let xScaleRegression, yScaleRegression, xScaleLoss, yScaleLoss, xScaleLossFunction, yScaleLossFunction;
+        
+        // Calculate optimal weight using analytical solution
+        function calculateOptimalWeight() {
+            let sumXY = 0, sumXX = 0;
+            for (let point of faithfulData) {
+                sumXY += point.eruption * point.waiting;
+                sumXX += point.eruption * point.eruption;
+            }
+            return sumXY / sumXX;
+        }
+        
+        // Initialize
+        optimalWeight = calculateOptimalWeight();
+        
+        // Update learning rate
+        document.getElementById('learningRateSlider').addEventListener('input', function() {
+            learningRate = parseFloat(this.value);
+            document.getElementById('learningRateValue').textContent = learningRate.toFixed(3);
+        });
+
+        function calculateLoss(weight) {
+            let totalLoss = 0;
+            for (let point of faithfulData) {
+                const prediction = weight * point.eruption;
+                const error = prediction - point.waiting;
+                totalLoss += error * error;
+            }
+            return totalLoss / (2 * faithfulData.length);
+        }
+
+        function calculateGradient(weight) {
+            let gradient = 0;
+            for (let point of faithfulData) {
+                const prediction = weight * point.eruption;
+                const error = prediction - point.waiting;
+                gradient += error * point.eruption;
+            }
+            return gradient / faithfulData.length;
+        }
+
+        function initializeCharts() {
+            console.log('=== Starting chart initialization ===');
+            
+            // Check if elements exist
+            const regressionElement = document.getElementById('regressionChart');
+            const lossElement = document.getElementById('lossChart');
+            const lossFunctionElement = document.getElementById('lossFunctionChart');
+            
+            console.log('Regression element found:', !!regressionElement);
+            console.log('Loss element found:', !!lossElement);
+            console.log('Loss function element found:', !!lossFunctionElement);
+            
+            if (!regressionElement || !lossElement || !lossFunctionElement) {
+                console.error('Chart containers not found!');
+                return false;
+            }
+            
+            // Clear any existing content
+            regressionElement.innerHTML = '';
+            lossElement.innerHTML = '';
+            lossFunctionElement.innerHTML = '';
+            
+            try {
+                // Create regression chart using native D3
+                console.log('Creating regression chart SVG...');
+                const regressionSvgElement = d3.select(regressionElement)
+                    .append('svg')
+                    .attr('width', width + margin.left + margin.right)
+                    .attr('height', height + margin.top + margin.bottom)
+                    .style('background-color', '#fafafa');
+                    
+                console.log('Regression SVG created:', regressionSvgElement.node());
+                
+                regressionSvg = regressionSvgElement
+                    .append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                // Create scales
+                xScaleRegression = d3.scaleLinear()
+                    .domain([1, 5])
+                    .range([0, width]);
+
+                yScaleRegression = d3.scaleLinear()
+                    .domain([40, 100])
+                    .range([height, 0]);
+
+                // Add basic axes first
+                regressionSvg.append('g')
+                    .attr('class', 'x-axis')
+                    .attr('transform', `translate(0,${height})`)
+                    .call(d3.axisBottom(xScaleRegression))
+                    .selectAll('text')
+                    .style('fill', '#666');
+
+                regressionSvg.append('g')
+                    .attr('class', 'y-axis')
+                    .call(d3.axisLeft(yScaleRegression))
+                    .selectAll('text')
+                    .style('fill', '#666');
+
+                // Add axis labels
+                regressionSvg.append('text')
+                    .attr('x', width / 2)
+                    .attr('y', height + 35)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#666')
+                    .style('font-size', '12px')
+                    .text('Eruption Duration (minutes)');
+
+                regressionSvg.append('text')
+                    .attr('transform', 'rotate(-90)')
+                    .attr('x', -height / 2)
+                    .attr('y', -35)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#666')
+                    .style('font-size', '12px')
+                    .text('Waiting Time (minutes)');
+
+                console.log('Regression chart setup complete');
+
+                // Create loss chart
+                console.log('Creating loss chart SVG...');
+                const lossSvgElement = d3.select(lossElement)
+                    .append('svg')
+                    .attr('width', width + margin.left + margin.right)
+                    .attr('height', height + margin.top + margin.bottom)
+                    .style('background-color', '#fafafa');
+                    
+                console.log('Loss SVG created:', lossSvgElement.node());
+
+                lossSvg = lossSvgElement
+                    .append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                // Create scales for loss chart
+                xScaleLoss = d3.scaleLinear()
+                    .domain([0, 50])
+                    .range([0, width]);
+
+                yScaleLoss = d3.scaleLinear()
+                    .domain([0, 1000])
+                    .range([height, 0]);
+
+                // Add basic axes
+                lossSvg.append('g')
+                    .attr('class', 'x-axis')
+                    .attr('transform', `translate(0,${height})`)
+                    .call(d3.axisBottom(xScaleLoss))
+                    .selectAll('text')
+                    .style('fill', '#666');
+
+                lossSvg.append('g')
+                    .attr('class', 'y-axis')
+                    .call(d3.axisLeft(yScaleLoss))
+                    .selectAll('text')
+                    .style('fill', '#666');
+
+                // Add axis labels
+                lossSvg.append('text')
+                    .attr('x', width / 2)
+                    .attr('y', height + 35)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#666')
+                    .style('font-size', '12px')
+                    .text('Iterations');
+
+                lossSvg.append('text')
+                    .attr('transform', 'rotate(-90)')
+                    .attr('x', -height / 2)
+                    .attr('y', -35)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#666')
+                    .style('font-size', '12px')
+                    .text('Loss');
+
+                console.log('Loss chart setup complete');
+                
+                // Create loss function chart
+                console.log('Creating loss function chart SVG...');
+                const lossFunctionSvgElement = d3.select(lossFunctionElement)
+                    .append('svg')
+                    .attr('width', width + margin.left + margin.right)
+                    .attr('height', height + margin.top + margin.bottom)
+                    .style('background-color', '#fafafa')
+                    .style('border', '1px solid #ddd');
+                    
+                console.log('Loss function SVG created:', lossFunctionSvgElement.node());
+
+                lossFunctionSvg = lossFunctionSvgElement
+                    .append('g')
+                    .attr('transform', `translate(${margin.left},${margin.top})`);
+
+                // Create scales for loss function chart
+                xScaleLossFunction = d3.scaleLinear()
+                    .domain([0, 25]) // Weight range
+                    .range([0, width]);
+
+                yScaleLossFunction = d3.scaleLinear()
+                    .domain([0, 2000]) // Loss range
+                    .range([height, 0]);
+
+                // Add basic axes
+                lossFunctionSvg.append('g')
+                    .attr('class', 'x-axis')
+                    .attr('transform', `translate(0,${height})`)
+                    .call(d3.axisBottom(xScaleLossFunction))
+                    .selectAll('text')
+                    .style('fill', '#666');
+
+                lossFunctionSvg.append('g')
+                    .attr('class', 'y-axis')
+                    .call(d3.axisLeft(yScaleLossFunction))
+                    .selectAll('text')
+                    .style('fill', '#666');
+
+                // Add axis labels
+                lossFunctionSvg.append('text')
+                    .attr('x', width / 2)
+                    .attr('y', height + 35)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#666')
+                    .style('font-size', '12px')
+                    .text('Weight (w)');
+
+                lossFunctionSvg.append('text')
+                    .attr('transform', 'rotate(-90)')
+                    .attr('x', -height / 2)
+                    .attr('y', -35)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#666')
+                    .style('font-size', '12px')
+                    .text('Loss');
+
+                // Draw the quadratic loss function curve
+                const lossData = [];
+                for (let w = 0; w <= 25; w += 0.1) {
+                    lossData.push({
+                        weight: w,
+                        loss: calculateLoss(w)
+                    });
+                }
+
+                const lossFunctionLine = d3.line()
+                    .x(d => xScaleLossFunction(d.weight))
+                    .y(d => yScaleLossFunction(d.loss))
+                    .curve(d3.curveMonotoneX);
+
+                lossFunctionSvg.append('path')
+                    .datum(lossData)
+                    .attr('class', 'loss-function-curve')
+                    .attr('d', lossFunctionLine)
+                    .style('fill', 'none')
+                    .style('stroke', '#9B59B6')
+                    .style('stroke-width', 3)
+                    .style('opacity', 0.7);
+
+                // Add optimal point marker
+                const optimalLoss = calculateLoss(optimalWeight);
+                lossFunctionSvg.append('circle')
+                    .attr('class', 'optimal-point')
+                    .attr('cx', xScaleLossFunction(optimalWeight))
+                    .attr('cy', yScaleLossFunction(optimalLoss))
+                    .attr('r', 8)
+                    .style('fill', '#2ECC71')
+                    .style('stroke', '#27AE60')
+                    .style('stroke-width', 3);
+
+                // Add optimal point label
+                lossFunctionSvg.append('text')
+                    .attr('x', xScaleLossFunction(optimalWeight))
+                    .attr('y', yScaleLossFunction(optimalLoss) - 15)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#2ECC71')
+                    .style('font-size', '12px')
+                    .style('font-weight', 'bold')
+                    .text('Optimal');
+
+                console.log('Loss function chart setup complete');
+                
+                // Verify SVGs were created
+                const regSvg = document.querySelector('#regressionChart svg');
+                const lossSvgCheck = document.querySelector('#lossChart svg');
+                const lossFunctionSvgCheck = document.querySelector('#lossFunctionChart svg');
+                console.log('Final verification - Regression SVG exists:', !!regSvg);
+                console.log('Final verification - Loss SVG exists:', !!lossSvgCheck);
+                console.log('Final verification - Loss Function SVG exists:', !!lossFunctionSvgCheck);
+                
+                return true;
+                
+            } catch (error) {
+                console.error('Error creating charts:', error);
+                regressionElement.innerHTML = '<p style="color: red; padding: 20px;">Chart creation failed: ' + error.message + '</p>';
+                return false;
+            }
+        }
+
+        function updateRegressionChart() {
+            if (!regressionSvg) {
+                console.log('Regression SVG not available, skipping update');
+                return;
+            }
+
+            // Clear previous elements
+            regressionSvg.selectAll('.data-point').remove();
+            regressionSvg.selectAll('.regression-line').remove();
+            regressionSvg.selectAll('.optimal-line').remove();
+
+            // Add data points
+            regressionSvg.selectAll('.data-point')
+                .data(faithfulData)
+                .enter()
+                .append('circle')
+                .attr('class', 'data-point')
+                .attr('cx', d => xScaleRegression(d.eruption))
+                .attr('cy', d => yScaleRegression(d.waiting))
+                .attr('r', 4)
+                .style('fill', '#3498DB')
+                .style('stroke', '#2980B9')
+                .style('stroke-width', 1.5);
+
+            // Add current regression line
+            const lineData = [
+                {x: 1, y: currentWeight * 1},
+                {x: 5, y: currentWeight * 5}
+            ];
+
+            const line = d3.line()
+                .x(d => xScaleRegression(d.x))
+                .y(d => yScaleRegression(d.y));
+
+            regressionSvg.append('path')
+                .datum(lineData)
+                .attr('class', 'regression-line')
+                .attr('d', line)
+                .style('fill', 'none')
+                .style('stroke', '#E74C3C')
+                .style('stroke-width', 3);
+
+            // Add optimal regression line
+            const optimalLineData = [
+                {x: 1, y: optimalWeight * 1},
+                {x: 5, y: optimalWeight * 5}
+            ];
+
+            regressionSvg.append('path')
+                .datum(optimalLineData)
+                .attr('class', 'optimal-line')
+                .attr('d', line)
+                .style('fill', 'none')
+                .style('stroke', '#2ECC71')
+                .style('stroke-width', 2)
+                .style('stroke-dasharray', '5,5');
+        }
+
+        function updateLossChart() {
+            if (!lossSvg || iterationHistory.length === 0) return;
+
+            // Update scales
+            const maxIteration = Math.max(50, iterationHistory.length);
+            const maxLoss = d3.max(iterationHistory, d => d.loss) * 1.1;
+
+            xScaleLoss.domain([0, maxIteration]);
+            yScaleLoss.domain([0, maxLoss]);
+
+            // Update axes
+            lossSvg.select('.y-axis')
+                .transition()
+                .duration(300)
+                .call(d3.axisLeft(yScaleLoss));
+
+            lossSvg.select('.x-axis')
+                .transition()
+                .duration(300)
+                .call(d3.axisBottom(xScaleLoss));
+
+            // Clear previous line and points
+            lossSvg.selectAll('.loss-line').remove();
+            lossSvg.selectAll('.loss-point').remove();
+
+            // Create loss line
+            const lossLine = d3.line()
+                .x(d => xScaleLoss(d.step))
+                .y(d => yScaleLoss(d.loss))
+                .curve(d3.curveMonotoneX);
+
+            lossSvg.append('path')
+                .datum(iterationHistory)
+                .attr('class', 'loss-line')
+                .attr('d', lossLine)
+                .style('fill', 'none')
+                .style('stroke', '#9B59B6')
+                .style('stroke-width', 2);
+
+            // Add loss points
+            lossSvg.selectAll('.loss-point')
+                .data(iterationHistory.slice(-10))
+                .enter()
+                .append('circle')
+                .attr('class', 'loss-point')
+                .attr('cx', d => xScaleLoss(d.step))
+                .attr('cy', d => yScaleLoss(d.loss))
+                .attr('r', 4)
+                .style('fill', '#E74C3C')
+                .style('stroke', '#C0392B')
+                .style('stroke-width', 2);
+        }
+
+        function updateLossFunctionChart() {
+            if (!lossFunctionSvg) return;
+
+            // Clear previous gradient descent path
+            lossFunctionSvg.selectAll('.gradient-path').remove();
+            lossFunctionSvg.selectAll('.current-point').remove();
+            lossFunctionSvg.selectAll('.gradient-arrow').remove();
+            lossFunctionSvg.selectAll('.iteration-point').remove();
+            lossFunctionSvg.selectAll('.step-line').remove();
+
+            if (iterationHistory.length === 0) return;
+
+            // Draw step-by-step path showing actual movement on the loss curve
+            for (let i = 0; i < iterationHistory.length - 1; i++) {
+                const current = iterationHistory[i];
+                const next = iterationHistory[i + 1];
+                
+                // Draw vertical line showing the step
+                lossFunctionSvg.append('line')
+                    .attr('class', 'step-line')
+                    .attr('x1', xScaleLossFunction(current.weight))
+                    .attr('y1', yScaleLossFunction(current.loss))
+                    .attr('x2', xScaleLossFunction(next.weight))
+                    .attr('y2', yScaleLossFunction(next.loss))
+                    .style('stroke', '#E74C3C')
+                    .style('stroke-width', 2)
+                    .style('stroke-dasharray', '3,3')
+                    .style('opacity', 0.7);
+            }
+
+            // Add points for each iteration ON the loss curve
+            lossFunctionSvg.selectAll('.iteration-point')
+                .data(iterationHistory)
+                .enter()
+                .append('circle')
+                .attr('class', 'iteration-point')
+                .attr('cx', d => xScaleLossFunction(d.weight))
+                .attr('cy', d => yScaleLossFunction(d.loss))
+                .attr('r', 4)
+                .style('fill', '#E74C3C')
+                .style('stroke', '#C0392B')
+                .style('stroke-width', 2)
+                .style('opacity', 0.9);
+
+            // Add iteration numbers to the first few and last few points
+            const pointsToLabel = Math.min(5, iterationHistory.length);
+            const startPoints = iterationHistory.slice(0, pointsToLabel);
+            const endPoints = iterationHistory.length > pointsToLabel ? 
+                            iterationHistory.slice(-pointsToLabel) : [];
+
+            [...startPoints, ...endPoints].forEach((point, idx) => {
+                const isStart = idx < startPoints.length;
+                const displayStep = isStart ? point.step : point.step;
+                
+                lossFunctionSvg.append('text')
+                    .attr('x', xScaleLossFunction(point.weight))
+                    .attr('y', yScaleLossFunction(point.loss) - 15)
+                    .style('text-anchor', 'middle')
+                    .style('fill', '#E74C3C')
+                    .style('font-size', '10px')
+                    .style('font-weight', 'bold')
+                    .text(displayStep);
+            });
+
+            // Highlight current position with larger circle
+            const currentHistory = iterationHistory[iterationHistory.length - 1];
+            lossFunctionSvg.append('circle')
+                .attr('class', 'current-point')
+                .attr('cx', xScaleLossFunction(currentHistory.weight))
+                .attr('cy', yScaleLossFunction(currentHistory.loss))
+                .attr('r', 8)
+                .style('fill', '#F39C12')
+                .style('stroke', '#E67E22')
+                .style('stroke-width', 3);
+
+            // Add gradient arrow showing the direction of next step
+            if (iterationHistory.length > 0) {
+                const current = iterationHistory[iterationHistory.length - 1];
+                const gradient = current.gradient;
+                
+                // Calculate the tangent line at current point
+                const arrowLength = 40;
+                const arrowX = xScaleLossFunction(current.weight);
+                const arrowY = yScaleLossFunction(current.loss);
+                
+                // Arrow pointing in negative gradient direction (direction of steepest descent)
+                // The slope of the tangent line is the gradient
+                const deltaWeight = learningRate * gradient;
+                const nextWeight = current.weight - deltaWeight;
+                const nextLoss = calculateLoss(nextWeight);
+                
+                const arrowEndX = xScaleLossFunction(nextWeight);
+                const arrowEndY = yScaleLossFunction(nextLoss);
+
+                // Draw gradient arrow showing next step direction
+                lossFunctionSvg.append('line')
+                    .attr('class', 'gradient-arrow')
+                    .attr('x1', arrowX)
+                    .attr('y1', arrowY)
+                    .attr('x2', arrowEndX)
+                    .attr('y2', arrowEndY)
+                    .style('stroke', '#F39C12')
+                    .style('stroke-width', 4)
+                    .attr('marker-end', 'url(#arrowhead)');
+
+                // Add tangent line to show gradient slope
+                const tangentLength = 50;
+                const tangentStartX = arrowX - tangentLength/2;
+                const tangentEndX = arrowX + tangentLength/2;
+                const tangentStartY = arrowY - (tangentLength/2) * (gradient / xScaleLossFunction.invert(1));
+                const tangentEndY = arrowY + (tangentLength/2) * (gradient / xScaleLossFunction.invert(1));
+
+                lossFunctionSvg.append('line')
+                    .attr('class', 'tangent-line')
+                    .attr('x1', tangentStartX)
+                    .attr('y1', tangentStartY)
+                    .attr('x2', tangentEndX)
+                    .attr('y2', tangentEndY)
+                    .style('stroke', '#F39C12')
+                    .style('stroke-width', 2)
+                    .style('stroke-dasharray', '5,5')
+                    .style('opacity', 0.6);
+
+                // Add arrowhead marker definition if not exists
+                if (lossFunctionSvg.select('#arrowhead').empty()) {
+                    lossFunctionSvg.append('defs')
+                        .append('marker')
+                        .attr('id', 'arrowhead')
+                        .attr('refX', 6)
+                        .attr('refY', 3)
+                        .attr('markerWidth', 10)
+                        .attr('markerHeight', 6)
+                        .attr('orient', 'auto')
+                        .append('polygon')
+                        .attr('points', '0 0, 6 3, 0 6')
+                        .style('fill', '#F39C12');
+                }
+            }
+        }
+
+        function updateUI() {
+            const currentLoss = calculateLoss(currentWeight);
+            const currentGradient = calculateGradient(currentWeight);
+            
+            document.getElementById('currentEquation').textContent = `y = ${currentWeight.toFixed(3)} × x`;
+            document.getElementById('optimalEquation').textContent = `y = ${optimalWeight.toFixed(3)} × x`;
+            document.getElementById('trainingError').textContent = currentLoss.toFixed(3);
+            document.getElementById('currentGradient').textContent = currentGradient.toFixed(3);
+            document.getElementById('currentStep').textContent = step;
+            
+            const converged = Math.abs(currentGradient) < 0.001;
+            document.getElementById('currentStatus').innerHTML = converged ? 
+                '<span style="color: #2ECC71;">✓ Converged!</span>' : 
+                `<span style="color: #F39C12;">Training... (Gradient: ${currentGradient.toFixed(3)})</span>`;
+            
+            // Update iteration history
+            const historyDiv = document.getElementById('iterationHistory');
+            if (iterationHistory.length === 0) {
+                historyDiv.innerHTML = 'No iterations yet...';
+            } else {
+                historyDiv.innerHTML = iterationHistory.slice(-8).map((hist, idx) => `
+                    <div class="iteration-item">
+                        Step ${hist.step}: w=${hist.weight.toFixed(3)}, loss=${hist.loss.toFixed(2)}, grad=${hist.gradient.toFixed(3)}
+                    </div>
+                `).join('');
+            }
+        }
+
+        function stepGradientDescent() {
+            if (isRunning) return;
+            
+            const gradient = calculateGradient(currentWeight);
+            const loss = calculateLoss(currentWeight);
+            
+            // Record current state
+            iterationHistory.push({
+                step: step,
+                weight: currentWeight,
+                loss: loss,
+                gradient: gradient
+            });
+            
+            // Update weight
+            currentWeight = currentWeight - learningRate * gradient;
+            step++;
+            
+            updateRegressionChart();
+            updateLossChart();
+            updateLossFunctionChart();
+            updateUI();
+        }
+
+        function runGradientDescent() {
+            if (isRunning) return;
+            
+            isRunning = true;
+            const interval = setInterval(() => {
+                const gradient = calculateGradient(currentWeight);
+                
+                if (Math.abs(gradient) < 0.001 || step > 1000) {
+                    clearInterval(interval);
+                    isRunning = false;
+                    return;
+                }
+                
+                stepGradientDescent();
+            }, 150);
+        }
+
+        function resetVisualization() {
+            isRunning = false;
+            currentWeight = parseFloat(document.getElementById('initialWeight').value);
+            step = 0;
+            iterationHistory = [];
+            
+            initializeCharts();
+            updateRegressionChart();
+            updateUI();
+        }
+
+        // IMMEDIATE EXECUTION - Initialize app
+        console.log('Starting immediate initialization...');
+        
+        // Wait for D3 to load, then initialize
+        function tryInitialize() {
+            console.log('Trying to initialize...');
+            if (typeof d3 !== 'undefined') {
+                console.log('D3 is available, initializing charts...');
+                
+                if (initializeCharts()) {
+                    updateRegressionChart();
+                    updateUI();
+                    
+                    // Setup learning rate slider
+                    const slider = document.getElementById('learningRateSlider');
+                    if (slider) {
+                        slider.addEventListener('input', function() {
+                            learningRate = parseFloat(this.value);
+                            document.getElementById('learningRateValue').textContent = learningRate.toFixed(3);
+                        });
+                        console.log('Learning rate slider setup complete');
+                    }
+                    
+                    // Setup button event listeners
+                    const stepBtn = document.getElementById('stepBtn');
+                    const runBtn = document.getElementById('runBtn');
+                    const resetBtn = document.getElementById('resetBtn');
+                    
+                    if (stepBtn) stepBtn.addEventListener('click', stepGradientDescent);
+                    if (runBtn) runBtn.addEventListener('click', runGradientDescent);
+                    if (resetBtn) resetBtn.addEventListener('click', resetVisualization);
+                    
+                    console.log('Initialization complete!');
+                } else {
+                    console.log('Chart initialization failed, retrying in 500ms...');
+                    setTimeout(tryInitialize, 500);
+                }
+            } else {
+                console.log('D3 not yet available, retrying in 100ms...');
+                setTimeout(tryInitialize, 100);
+            }
+        }
+        
+        // Start trying to initialize immediately
+        tryInitialize();
+        
+        // Also try when DOM is ready as backup
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', tryInitialize);
+        }
+        
+        // Make functions globally accessible
+        window.stepGradientDescent = stepGradientDescent;
+        window.runGradientDescent = runGradientDescent;
+        window.resetVisualization = resetVisualization;
+        
+        console.log('Script setup complete');
+    </script>
+</body>
+</html>

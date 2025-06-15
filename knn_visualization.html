@@ -1,0 +1,880 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KNN Algorithm Visualization</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+        }
+        
+        .title {
+            text-align: center;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            background: linear-gradient(45deg, #FFD700, #FFA500);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .subtitle {
+            text-align: center;
+            font-size: 1.2em;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .control-group {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .feature-controls {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 15px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+        }
+        
+        .feature-controls h3 {
+            margin: 0 0 15px 0;
+            text-align: center;
+            color: #FFD700;
+            font-size: 1.3em;
+        }
+        
+        .feature-toggles {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        .feature-toggle {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.1);
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .feature-toggle:hover {
+            background: rgba(255, 255, 255, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .feature-toggle input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .feature-toggle label {
+            cursor: pointer;
+            font-weight: bold;
+            color: white;
+        }
+        
+        .control-group label {
+            font-weight: bold;
+            min-width: 80px;
+        }
+        
+        input[type="range"] {
+            width: 120px;
+            height: 6px;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.3);
+            outline: none;
+        }
+        
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: #FFD700;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.3);
+        }
+        
+        input[type="number"] {
+            width: 80px;
+            padding: 8px;
+            border: none;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.9);
+            color: #333;
+            font-weight: bold;
+        }
+        
+        .predict-btn {
+            background: linear-gradient(45deg, #FF6B6B, #4ECDC4);
+            border: none;
+            padding: 12px 24px;
+            border-radius: 25px;
+            color: white;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 1.1em;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+        }
+        
+        .predict-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0,0,0,0.3);
+        }
+        
+        .visualization {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .chart-container {
+            flex: 2;
+            background: rgba(255, 255, 255, 0.9);
+            border-radius: 15px;
+            padding: 20px;
+            position: relative;
+        }
+        
+        .info-panel {
+            flex: 1;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 15px;
+            padding: 20px;
+        }
+        
+        .info-panel h3 {
+            margin-top: 0;
+            color: #FFD700;
+            font-size: 1.4em;
+        }
+        
+        .prediction-result {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            text-align: center;
+            font-size: 1.2em;
+            font-weight: bold;
+        }
+        
+        .neighbors-list {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            margin: 15px 0;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        
+        .neighbor-item {
+            padding: 8px;
+            margin: 5px 0;
+            border-radius: 5px;
+            background: rgba(255, 255, 255, 0.1);
+            font-size: 0.9em;
+        }
+        
+        .legend {
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            margin-top: 15px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+        }
+        
+        .legend-dot {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+        }
+        
+        .axis-info {
+            background: rgba(255, 255, 255, 0.2);
+            padding: 10px;
+            border-radius: 10px;
+            margin: 10px 0;
+            text-align: center;
+            font-weight: bold;
+            color: #FFD700;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1 class="title">KNN Algorithm Visualization</h1>
+        <p class="subtitle">Social Network Ads Dataset - Feature Selection & Purchase Prediction</p>
+        
+        <div class="feature-controls">
+            <h3>Feature Selection</h3>
+            <div class="feature-toggles">
+                <div class="feature-toggle">
+                    <input type="checkbox" id="useAge" checked>
+                    <label for="useAge">Use Age</label>
+                </div>
+                <div class="feature-toggle">
+                    <input type="checkbox" id="useSalary" checked>
+                    <label for="useSalary">Use Salary</label>
+                </div>
+                <div class="feature-toggle">
+                    <input type="checkbox" id="useGender" checked>
+                    <label for="useGender">Use Gender</label>
+                </div>
+            </div>
+        </div>
+        
+        <div class="axis-info" id="axisInfo">
+            Current Plot: Age (X) vs Salary (Y)
+        </div>
+        
+        <div class="controls">
+            <div class="control-group">
+                <label>K Value:</label>
+                <input type="range" id="kSlider" min="1" max="20" value="5">
+                <span id="kValue">5</span>
+            </div>
+            <div class="control-group">
+                <label>Age:</label>
+                <input type="number" id="ageInput" min="18" max="65" value="35">
+            </div>
+            <div class="control-group">
+                <label>Salary:</label>
+                <input type="number" id="salaryInput" min="15000" max="150000" value="50000" step="1000">
+            </div>
+            <div class="control-group">
+                <label>Gender:</label>
+                <select id="genderInput" style="padding: 8px; border: none; border-radius: 5px; background: rgba(255, 255, 255, 0.9); color: #333; font-weight: bold;">
+                    <option value="Male">Male</option>
+                    <option value="Female">Female</option>
+                </select>
+            </div>
+            <button class="predict-btn" onclick="predictWithKNN()">Predict Purchase</button>
+            <button class="predict-btn" onclick="runTest()" style="background: linear-gradient(45deg, #9B59B6, #3498DB);">Run Test</button>
+        </div>
+        
+        <div class="visualization">
+            <div class="chart-container">
+                <canvas id="knnChart" width="600" height="400"></canvas>
+            </div>
+            <div class="info-panel">
+                <h3>Prediction Results</h3>
+                <div id="predictionResult" class="prediction-result">
+                    Click "Predict Purchase" to see results
+                </div>
+                <h4>Nearest Neighbors:</h4>
+                <div id="neighborsList" class="neighbors-list">
+                    Select a point to see neighbors
+                </div>
+                <h4>Algorithm Steps:</h4>
+                <div id="algorithmSteps">
+                    <p><strong>Using features: Age, Salary, Gender</strong></p>
+                    <p>1. Calculate distance using selected features</p>
+                    <p>2. Find K nearest neighbors</p>
+                    <p>3. Count votes (Purchase vs No Purchase)</p>
+                    <p>4. Predict based on majority</p>
+                </div>
+                <h4>Test Results:</h4>
+                <div id="testResults" class="prediction-result" style="font-size: 0.9em;">
+                    Click "Run Test" to evaluate algorithm performance
+                </div>
+            </div>
+        </div>
+        
+        <div class="legend">
+            <div class="legend-item">
+                <div class="legend-dot" style="background-color: #FF6B6B;"></div>
+                <span>No Purchase (0)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background-color: #4ECDC4;"></div>
+                <span>Purchase (1)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background-color: #FFD700; border: 2px solid #333;"></div>
+                <span>New User (Prediction)</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-dot" style="background-color: #9B59B6; border: 2px solid #fff;"></div>
+                <span>K Nearest Neighbors</span>
+            </div>
+            <div class="legend-item">
+                <div style="width: 0; height: 0; border-left: 5px solid transparent; border-right: 5px solid transparent; border-bottom: 8px solid #3498DB; margin-right: 8px;"></div>
+                <span>Correct Test Predictions</span>
+            </div>
+            <div class="legend-item">
+                <div style="width: 12px; height: 12px; position: relative; margin-right: 8px;">
+                    <div style="position: absolute; width: 2px; height: 8px; background: #000000; transform: rotate(45deg); top: 2px; left: 5px;"></div>
+                    <div style="position: absolute; width: 2px; height: 8px; background: #000000; transform: rotate(-45deg); top: 2px; left: 5px;"></div>
+                </div>
+                <span>Incorrect Test Predictions</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Sample data from Social Network Ads dataset (subset for visualization)
+        const sampleData = [
+            {age: 19, salary: 19000, gender: 'Male', purchased: 0}, {age: 35, salary: 20000, gender: 'Male', purchased: 0},
+            {age: 26, salary: 43000, gender: 'Female', purchased: 0}, {age: 27, salary: 57000, gender: 'Female', purchased: 0},
+            {age: 19, salary: 76000, gender: 'Male', purchased: 0}, {age: 27, salary: 58000, gender: 'Male', purchased: 0},
+            {age: 27, salary: 84000, gender: 'Female', purchased: 0}, {age: 32, salary: 150000, gender: 'Female', purchased: 1},
+            {age: 25, salary: 33000, gender: 'Male', purchased: 0}, {age: 35, salary: 65000, gender: 'Female', purchased: 0},
+            {age: 26, salary: 80000, gender: 'Female', purchased: 0}, {age: 26, salary: 52000, gender: 'Male', purchased: 0},
+            {age: 20, salary: 86000, gender: 'Male', purchased: 0}, {age: 32, salary: 18000, gender: 'Female', purchased: 0},
+            {age: 18, salary: 82000, gender: 'Female', purchased: 0}, {age: 29, salary: 80000, gender: 'Male', purchased: 0},
+            {age: 47, salary: 25000, gender: 'Male', purchased: 1}, {age: 45, salary: 26000, gender: 'Male', purchased: 1},
+            {age: 46, salary: 28000, gender: 'Female', purchased: 1}, {age: 48, salary: 29000, gender: 'Female', purchased: 1},
+            {age: 45, salary: 22000, gender: 'Male', purchased: 1}, {age: 47, salary: 49000, gender: 'Male', purchased: 1},
+            {age: 48, salary: 41000, gender: 'Female', purchased: 1}, {age: 45, salary: 22000, gender: 'Female', purchased: 1},
+            {age: 46, salary: 23000, gender: 'Male', purchased: 1}, {age: 47, salary: 20000, gender: 'Female', purchased: 1},
+            {age: 49, salary: 28000, gender: 'Male', purchased: 1}, {age: 47, salary: 30000, gender: 'Female', purchased: 1},
+            {age: 29, salary: 43000, gender: 'Male', purchased: 0}, {age: 31, salary: 18000, gender: 'Female', purchased: 0},
+            {age: 31, salary: 74000, gender: 'Male', purchased: 0}, {age: 27, salary: 137000, gender: 'Female', purchased: 1},
+            {age: 21, salary: 16000, gender: 'Male', purchased: 0}, {age: 28, salary: 44000, gender: 'Female', purchased: 0},
+            {age: 27, salary: 90000, gender: 'Male', purchased: 0}, {age: 35, salary: 27000, gender: 'Female', purchased: 0},
+            {age: 33, salary: 28000, gender: 'Male', purchased: 0}, {age: 30, salary: 49000, gender: 'Female', purchased: 0},
+            {age: 26, salary: 72000, gender: 'Male', purchased: 0}, {age: 27, salary: 31000, gender: 'Female', purchased: 0},
+            {age: 27, salary: 17000, gender: 'Male', purchased: 0}, {age: 33, salary: 51000, gender: 'Female', purchased: 0},
+            {age: 35, salary: 108000, gender: 'Male', purchased: 0}, {age: 30, salary: 15000, gender: 'Female', purchased: 0},
+            {age: 28, salary: 84000, gender: 'Male', purchased: 0}, {age: 23, salary: 20000, gender: 'Female', purchased: 0},
+            {age: 25, salary: 79000, gender: 'Male', purchased: 0}, {age: 27, salary: 54000, gender: 'Female', purchased: 0},
+            {age: 30, salary: 135000, gender: 'Male', purchased: 1}, {age: 31, salary: 89000, gender: 'Female', purchased: 0},
+            {age: 24, salary: 32000, gender: 'Male', purchased: 0}, {age: 18, salary: 44000, gender: 'Female', purchased: 0},
+            {age: 29, salary: 83000, gender: 'Male', purchased: 0}, {age: 35, salary: 23000, gender: 'Female', purchased: 0},
+            {age: 27, salary: 58000, gender: 'Male', purchased: 0}, {age: 24, salary: 55000, gender: 'Female', purchased: 0},
+            {age: 23, salary: 48000, gender: 'Male', purchased: 0}, {age: 28, salary: 79000, gender: 'Female', purchased: 0},
+            {age: 22, salary: 18000, gender: 'Male', purchased: 0}, {age: 32, salary: 117000, gender: 'Female', purchased: 1},
+            {age: 27, salary: 20000, gender: 'Male', purchased: 0}, {age: 25, salary: 87000, gender: 'Female', purchased: 0},
+            {age: 23, salary: 66000, gender: 'Male', purchased: 0}, {age: 32, salary: 120000, gender: 'Female', purchased: 1},
+            {age: 59, salary: 83000, gender: 'Male', purchased: 1}, {age: 24, salary: 58000, gender: 'Female', purchased: 0},
+            {age: 24, salary: 19000, gender: 'Male', purchased: 0}, {age: 23, salary: 82000, gender: 'Female', purchased: 0},
+            {age: 22, salary: 63000, gender: 'Male', purchased: 0}, {age: 31, salary: 68000, gender: 'Female', purchased: 0},
+            {age: 25, salary: 80000, gender: 'Male', purchased: 0}, {age: 24, salary: 27000, gender: 'Female', purchased: 0},
+            {age: 20, salary: 23000, gender: 'Male', purchased: 0}, {age: 33, salary: 113000, gender: 'Female', purchased: 1},
+            {age: 32, salary: 18000, gender: 'Male', purchased: 0}, {age: 34, salary: 112000, gender: 'Female', purchased: 1},
+            {age: 18, salary: 52000, gender: 'Male', purchased: 0}, {age: 22, salary: 27000, gender: 'Female', purchased: 0},
+            {age: 28, salary: 87000, gender: 'Male', purchased: 0}, {age: 26, salary: 17000, gender: 'Female', purchased: 0},
+            {age: 30, salary: 80000, gender: 'Male', purchased: 0}, {age: 39, salary: 42000, gender: 'Female', purchased: 1},
+            {age: 20, salary: 49000, gender: 'Male', purchased: 0}, {age: 35, salary: 88000, gender: 'Female', purchased: 0},
+            {age: 32, salary: 84000, gender: 'Male', purchased: 0}, {age: 35, salary: 72000, gender: 'Female', purchased: 0},
+            {age: 25, salary: 28000, gender: 'Male', purchased: 0}, {age: 32, salary: 90000, gender: 'Female', purchased: 0},
+            {age: 37, salary: 71000, gender: 'Male', purchased: 0}, {age: 28, salary: 75000, gender: 'Female', purchased: 0},
+            {age: 36, salary: 35000, gender: 'Male', purchased: 1}, {age: 36, salary: 61000, gender: 'Female', purchased: 0},
+            {age: 40, salary: 71000, gender: 'Male', purchased: 1}, {age: 40, salary: 72000, gender: 'Female', purchased: 1},
+            {age: 37, salary: 103000, gender: 'Male', purchased: 1}, {age: 30, salary: 88000, gender: 'Female', purchased: 0},
+            {age: 29, salary: 77000, gender: 'Male', purchased: 0}, {age: 19, salary: 25000, gender: 'Female', purchased: 0},
+            {age: 19, salary: 85000, gender: 'Male', purchased: 0}, {age: 49, salary: 28000, gender: 'Female', purchased: 1},
+            {age: 42, salary: 52000, gender: 'Male', purchased: 1}, {age: 39, salary: 36000, gender: 'Female', purchased: 1},
+            {age: 41, salary: 72000, gender: 'Male', purchased: 1}, {age: 39, salary: 35000, gender: 'Female', purchased: 1},
+            {age: 36, salary: 67000, gender: 'Male', purchased: 0}, {age: 47, salary: 23000, gender: 'Female', purchased: 1},
+            {age: 38, salary: 50000, gender: 'Male', purchased: 1}, {age: 42, salary: 79000, gender: 'Female', purchased: 1},
+            {age: 40, salary: 65000, gender: 'Male', purchased: 1}, {age: 57, salary: 60000, gender: 'Female', purchased: 1},
+            {age: 36, salary: 54000, gender: 'Male', purchased: 0}, {age: 58, salary: 38000, gender: 'Female', purchased: 1},
+            {age: 42, salary: 80000, gender: 'Male', purchased: 1}, {age: 58, salary: 66000, gender: 'Female', purchased: 1},
+            {age: 43, salary: 37000, gender: 'Male', purchased: 1}, {age: 42, salary: 73000, gender: 'Female', purchased: 1},
+            {age: 60, salary: 83000, gender: 'Male', purchased: 1}, {age: 45, salary: 65000, gender: 'Female', purchased: 1},
+            {age: 41, salary: 59000, gender: 'Male', purchased: 1}, {age: 35, salary: 75000, gender: 'Female', purchased: 0},
+            {age: 28, salary: 89000, gender: 'Male', purchased: 0}, {age: 46, salary: 41000, gender: 'Female', purchased: 1}
+        ];
+
+        const canvas = document.getElementById('knnChart');
+        const ctx = canvas.getContext('2d');
+        
+        let currentK = 5;
+        let predictedPoint = null;
+        let nearestNeighbors = [];
+        let trainingData = [];
+        let testingData = [];
+        let isTestMode = false;
+        let useAge = true;
+        let useSalary = true;
+        let useGender = true;
+        let currentXAxis = 'age';
+        let currentYAxis = 'salary';
+        
+        // Initialize with default train-test split
+        function initializeData() {
+            const shuffled = [...sampleData].sort(() => Math.random() - 0.5);
+            const splitIndex = Math.floor(shuffled.length * 0.8);
+            trainingData = shuffled.slice(0, splitIndex);
+            testingData = shuffled.slice(splitIndex);
+        }
+
+        // Update axes based on selected features
+        function updateAxes() {
+            const selectedFeatures = [];
+            if (useAge) selectedFeatures.push('age');
+            if (useSalary) selectedFeatures.push('salary');
+            if (useGender) selectedFeatures.push('gender');
+            
+            if (selectedFeatures.length >= 2) {
+                currentXAxis = selectedFeatures[0];
+                currentYAxis = selectedFeatures[1];
+            } else if (selectedFeatures.length === 1) {
+                currentXAxis = selectedFeatures[0];
+                currentYAxis = 'purchased';
+            } else {
+                currentXAxis = 'age';
+                currentYAxis = 'salary';
+            }
+            
+            updateAxisInfo();
+        }
+        
+        function updateAxisInfo() {
+            const axisInfo = document.getElementById('axisInfo');
+            const xLabel = currentXAxis.charAt(0).toUpperCase() + currentXAxis.slice(1);
+            const yLabel = currentYAxis.charAt(0).toUpperCase() + currentYAxis.slice(1);
+            axisInfo.textContent = `Current Plot: ${xLabel} (X) vs ${yLabel} (Y)`;
+        }
+
+        function getPointCoordinates(point) {
+            let x, y;
+            
+            // X-axis coordinate
+            switch(currentXAxis) {
+                case 'age':
+                    x = (point.age - 18) * 12 + 40;
+                    break;
+                case 'salary':
+                    x = (point.salary / 150000 * 560) + 20;
+                    break;
+                case 'gender':
+                    x = point.gender === 'Male' ? 150 : 450;
+                    break;
+                default:
+                    x = (point.age - 18) * 12 + 40;
+            }
+            
+            // Y-axis coordinate
+            switch(currentYAxis) {
+                case 'age':
+                    y = canvas.height - ((point.age - 18) / 47 * 350) - 30;
+                    break;
+                case 'salary':
+                    y = canvas.height - (point.salary / 150000 * 350) - 30;
+                    break;
+                case 'gender':
+                    y = point.gender === 'Male' ? 100 : 300;
+                    break;
+                case 'purchased':
+                    y = point.purchased === 1 ? 100 : 300;
+                    break;
+                default:
+                    y = canvas.height - (point.salary / 150000 * 350) - 30;
+            }
+            
+            return { x, y };
+        }
+
+        // Update K value
+        document.getElementById('kSlider').addEventListener('input', function() {
+            currentK = parseInt(this.value);
+            document.getElementById('kValue').textContent = currentK;
+            if (predictedPoint) {
+                predictWithKNN();
+            }
+            // If in test mode, re-run test with new K value
+            if (isTestMode) {
+                runTest();
+            }
+        });
+
+        // Feature toggle event listeners
+        document.getElementById('useAge').addEventListener('change', function() {
+            useAge = this.checked;
+            updateFeatureSelection();
+        });
+        
+        document.getElementById('useSalary').addEventListener('change', function() {
+            useSalary = this.checked;
+            updateFeatureSelection();
+        });
+        
+        document.getElementById('useGender').addEventListener('change', function() {
+            useGender = this.checked;
+            updateFeatureSelection();
+        });
+        
+        function updateFeatureSelection() {
+            updateAxes();
+            
+            // Re-run prediction if one exists
+            if (predictedPoint) {
+                predictWithKNN();
+            }
+            
+            // Re-run test if in test mode
+            if (isTestMode) {
+                runTest();
+            }
+            
+            // Update algorithm steps to show which features are being used
+            const featuresUsed = [useAge && 'Age', useSalary && 'Salary', useGender && 'Gender'].filter(Boolean);
+            const stepsDiv = document.getElementById('algorithmSteps');
+            
+            if (featuresUsed.length === 0) {
+                stepsDiv.innerHTML = `
+                    <p style="color: #E74C3C;"><strong>⚠️ No features selected!</strong></p>
+                    <p>Please select at least one feature to make predictions.</p>
+                `;
+            } else {
+                stepsDiv.innerHTML = `
+                    <p><strong>Using features: ${featuresUsed.join(', ')}</strong></p>
+                    <p>1. Calculate distance using selected features</p>
+                    <p>2. Find K nearest neighbors</p>
+                    <p>3. Count votes (Purchase vs No Purchase)</p>
+                    <p>4. Predict based on majority</p>
+                `;
+            }
+            
+            drawChart();
+        }
+
+        function drawChart() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#f0f0f0';
+            ctx.lineWidth = 1;
+            for (let i = 0; i <= 10; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * 60, 0);
+                ctx.lineTo(i * 60, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * 40);
+                ctx.lineTo(canvas.width, i * 40);
+                ctx.stroke();
+            }
+            
+            // Draw axes labels
+            ctx.fillStyle = '#333';
+            ctx.font = '12px Arial';
+            const xLabel = currentXAxis.charAt(0).toUpperCase() + currentXAxis.slice(1);
+            const yLabel = currentYAxis.charAt(0).toUpperCase() + currentYAxis.slice(1);
+            ctx.fillText(`${xLabel} →`, canvas.width - 50, canvas.height - 10);
+            ctx.save();
+            ctx.translate(15, 50);
+            ctx.rotate(-Math.PI/2);
+            ctx.fillText(`${yLabel} →`, 0, 0);
+            ctx.restore();
+            
+            // Always draw training data (circles)
+            trainingData.forEach(point => {
+                const coords = getPointCoordinates(point);
+                
+                ctx.beginPath();
+                ctx.arc(coords.x, coords.y, 4, 0, 2 * Math.PI);
+                ctx.fillStyle = point.purchased === 1 ? '#4ECDC4' : '#FF6B6B';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            });
+            
+            // Draw testing data only in test mode (different shapes based on correctness)
+            if (isTestMode && testingData.length > 0) {
+                testingData.forEach(point => {
+                    const coords = getPointCoordinates(point);
+                    
+                    if (point.prediction !== undefined) {
+                        const isCorrect = point.prediction === point.purchased;
+                        
+                        if (isCorrect) {
+                            // Draw triangle for correct predictions
+                            ctx.beginPath();
+                            ctx.moveTo(coords.x, coords.y - 6);
+                            ctx.lineTo(coords.x - 5, coords.y + 4);
+                            ctx.lineTo(coords.x + 5, coords.y + 4);
+                            ctx.closePath();
+                            ctx.fillStyle = '#3498DB';
+                            ctx.fill();
+                            ctx.strokeStyle = '#2980B9';
+                            ctx.lineWidth = 2;
+                            ctx.stroke();
+                        } else {
+                            // Draw X for incorrect predictions
+                            ctx.strokeStyle = '#000000';
+                            ctx.lineWidth = 3;
+                            ctx.beginPath();
+                            ctx.moveTo(coords.x - 4, coords.y - 4);
+                            ctx.lineTo(coords.x + 4, coords.y + 4);
+                            ctx.moveTo(coords.x + 4, coords.y - 4);
+                            ctx.lineTo(coords.x - 4, coords.y + 4);
+                            ctx.stroke();
+                        }
+                    }
+                });
+            }
+            
+            // Draw nearest neighbors if available
+            if (nearestNeighbors.length > 0) {
+                nearestNeighbors.forEach(neighbor => {
+                    const coords = getPointCoordinates(neighbor);
+                    
+                    ctx.beginPath();
+                    ctx.arc(coords.x, coords.y, 8, 0, 2 * Math.PI);
+                    ctx.strokeStyle = '#9B59B6';
+                    ctx.lineWidth = 3;
+                    ctx.stroke();
+                });
+            }
+            
+            // Draw predicted point
+            if (predictedPoint) {
+                const coords = getPointCoordinates(predictedPoint);
+                
+                ctx.beginPath();
+                ctx.arc(coords.x, coords.y, 8, 0, 2 * Math.PI);
+                ctx.fillStyle = '#FFD700';
+                ctx.fill();
+                ctx.strokeStyle = '#333';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                // Draw lines to nearest neighbors
+                nearestNeighbors.forEach(neighbor => {
+                    const neighborCoords = getPointCoordinates(neighbor);
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(coords.x, coords.y);
+                    ctx.lineTo(neighborCoords.x, neighborCoords.y);
+                    ctx.strokeStyle = 'rgba(155, 89, 182, 0.5)';
+                    ctx.lineWidth = 2;
+                    ctx.stroke();
+                });
+            }
+        }
+
+        function calculateDistance(point1, point2) {
+            let distance = 0;
+            let components = 0;
+            
+            if (useAge) {
+                const ageNorm = (point1.age - point2.age) / 47; // age range normalization
+                distance += ageNorm * ageNorm;
+                components++;
+            }
+            
+            if (useSalary) {
+                const salaryNorm = (point1.salary - point2.salary) / 135000; // salary range normalization
+                distance += salaryNorm * salaryNorm;
+                components++;
+            }
+            
+            if (useGender && point1.gender && point2.gender) {
+                // Gender: 0 if same, 1 if different (normalized)
+                const genderDiff = point1.gender === point2.gender ? 0 : 1;
+                distance += genderDiff * genderDiff;
+                components++;
+            }
+            
+            // If no features selected, return infinity to avoid division by zero
+            if (components === 0) return Infinity;
+            
+            return Math.sqrt(distance);
+        }
+
+        function predictWithKNN() {
+            const age = parseInt(document.getElementById('ageInput').value);
+            const salary = parseInt(document.getElementById('salaryInput').value);
+            const gender = document.getElementById('genderInput').value;
+            
+            predictedPoint = { age, salary, gender };
+            
+            // Use training data if in test mode, otherwise use all data
+            const dataForPrediction = isTestMode ? trainingData : sampleData;
+            
+            // Calculate distances to all points
+            const distances = dataForPrediction.map(point => ({
+                ...point,
+                distance: calculateDistance(predictedPoint, point)
+            }));
+            
+            // Sort by distance and get k nearest
+            distances.sort((a, b) => a.distance - b.distance);
+            nearestNeighbors = distances.slice(0, currentK);
+            
+            // Count votes
+            const purchases = nearestNeighbors.filter(n => n.purchased === 1).length;
+            const nonPurchases = nearestNeighbors.filter(n => n.purchased === 0).length;
+            
+            const prediction = purchases > nonPurchases ? 1 : 0;
+            const confidence = Math.max(purchases, nonPurchases) / currentK * 100;
+            
+            // Update UI
+            const resultDiv = document.getElementById('predictionResult');
+            const featuresUsed = [useAge && 'Age', useSalary && 'Salary', useGender && 'Gender'].filter(Boolean).join(', ');
+            
+            if (prediction === 1) {
+                resultDiv.innerHTML = `<strong>WILL PURCHASE</strong><br>Confidence: ${confidence.toFixed(1)}%<br><small>Using: ${featuresUsed}</small>`;
+                resultDiv.style.background = 'rgba(76, 205, 196, 0.3)';
+            } else {
+                resultDiv.innerHTML = `<strong>WILL NOT PURCHASE</strong><br>Confidence: ${confidence.toFixed(1)}%<br><small>Using: ${featuresUsed}</small>`;
+                resultDiv.style.background = 'rgba(255, 107, 107, 0.3)';
+            }
+            
+            // Update neighbors list
+            const neighborsList = document.getElementById('neighborsList');
+            neighborsList.innerHTML = nearestNeighbors.map((neighbor, index) => `
+                <div class="neighbor-item">
+                    ${index + 1}. Age: ${neighbor.age}, Salary: ${neighbor.salary.toLocaleString()}, 
+                    Gender: ${neighbor.gender}, ${neighbor.purchased ? 'Purchased' : 'No Purchase'} 
+                    (Distance: ${neighbor.distance.toFixed(3)})
+                </div>
+            `).join('');
+            
+            drawChart();
+        }
+
+        function predictSinglePoint(testPoint, trainingData, k) {
+            // Calculate distances to all training points
+            const distances = trainingData.map(point => ({
+                ...point,
+                distance: calculateDistance(testPoint, point)
+            }));
+            
+            // Sort by distance and get k nearest
+            distances.sort((a, b) => a.distance - b.distance);
+            const neighbors = distances.slice(0, k);
+            
+            // Count votes
+            const purchases = neighbors.filter(n => n.purchased === 1).length;
+            const nonPurchases = neighbors.filter(n => n.purchased === 0).length;
+            
+            return purchases > nonPurchases ? 1 : 0;
+        }
+
+        function runTest() {
+            // Re-split data to ensure randomness
+            const shuffled = [...sampleData].sort(() => Math.random() - 0.5);
+            const splitIndex = Math.floor(shuffled.length * 0.8);
+            trainingData = shuffled.slice(0, splitIndex);
+            testingData = shuffled.slice(splitIndex);
+            
+            // Run predictions on test set
+            let correct = 0;
+            let totalPurchases = 0;
+            let totalNonPurchases = 0;
+            let correctPurchases = 0;
+            let correctNonPurchases = 0;
+            let falsePositives = 0;
+            let falseNegatives = 0;
+            
+            testingData.forEach(testPoint => {
+                const prediction = predictSinglePoint(testPoint, trainingData, currentK);
+                testPoint.prediction = prediction;
+                
+                if (prediction === testPoint.purchased) {
+                    correct++;
+                }
+                
+                // Count for detailed metrics
+                if (testPoint.purchased === 1) {
+                    totalPurchases++;
+                    if (prediction === 1) correctPurchases++;
+                    else falseNegatives++;
+                } else {
+                    totalNonPurchases++;
+                    if (prediction === 0) correctNonPurchases++;
+                    else falsePositives++;
+                }
+            });
+            
+            const accuracy = (correct / testingData.length * 100).toFixed(1);
+            const precision = (correctPurchases + falsePositives) > 0 ? (correctPurchases / (correctPurchases + falsePositives) * 100).toFixed(1) : 0;
+            const recall = totalPurchases > 0 ? (correctPurchases / totalPurchases * 100).toFixed(1) : 0;
+            
+            // Update test results
+            const testResultsDiv = document.getElementById('testResults');
+            testResultsDiv.innerHTML = `
+                <strong>Test Results (K=${currentK})</strong><br>
+                Training: ${trainingData.length} samples<br>
+                Testing: ${testingData.length} samples<br>
+                <strong>Accuracy: ${accuracy}%</strong><br>
+                Precision: ${precision}%<br>
+                Recall: ${recall}%<br>
+                Correct: ${correct}/${testingData.length}
+            `;
+            testResultsDiv.style.background = 'rgba(52, 152, 219, 0.3)';
+            
+            // Update neighbors list to show test results breakdown
+            const neighborsList = document.getElementById('neighborsList');
+            neighborsList.innerHTML = `
+                <div class="neighbor-item" style="background: rgba(46, 204, 113, 0.2);">
+                    ✓ Correct Predictions: ${correct}
+                </div>
+                <div class="neighbor-item" style="background: rgba(231, 76, 60, 0.2);">
+                    ✗ Incorrect Predictions: ${testingData.length - correct}
+                </div>
+                <div class="neighbor-item">
+                    True Positives: ${correctPurchases}
+                </div>
+                <div class="neighbor-item">
+                    False Positives: ${falsePositives}
+                </div>
+                <div class="neighbor-item">
+                    False Negatives: ${falseNegatives}
+                </div>
+            `;
+            
+            // Switch to test mode and redraw
+            isTestMode = true;
+            predictedPoint = null;
+            nearestNeighbors = [];
+            drawChart();
+        }
+
+        // Initial setup
+        initializeData();
+        updateFeatureSelection();
+    </script>
+</body>
+</html>
+                
